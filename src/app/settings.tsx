@@ -1,0 +1,117 @@
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Share, View } from 'react-native';
+
+import { api, isDemo } from '@/api';
+import { Button, Card, Divider, Input, ListRow, Screen, SectionTitle, Text, TopBar } from '@/components/ui';
+import { useMe, useUpdateProfile } from '@/hooks/queries';
+import { useToast } from '@/providers/ToastProvider';
+import { space } from '@/theme/tokens';
+
+export default function Settings() {
+  const me = useMe();
+  const update = useUpdateProfile();
+  const toast = useToast();
+  const [height, setHeight] = useState('');
+  const [weight, setWeight] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (me.data) {
+      setHeight(String(me.data.private.height_cm ?? ''));
+      setWeight(String(me.data.private.weight_kg ?? ''));
+    }
+  }, [me.data]);
+
+  async function saveBody() {
+    const h = Number(height.replace(',', '.'));
+    const w = Number(weight.replace(',', '.'));
+    if (!(h >= 100 && h <= 250) || !(w >= 25 && w <= 350)) {
+      toast('Confira altura e peso', 'error');
+      return;
+    }
+    try {
+      await update.mutateAsync({ priv: { height_cm: h, weight_kg: w } });
+      toast('Dados atualizados', 'success');
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  }
+
+  async function exportData() {
+    try {
+      const data = await api.exportMyData();
+      await Share.share({ title: 'Meus dados — ArenaFit', message: JSON.stringify(data, null, 2) });
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  }
+
+  async function deleteAccount() {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      toast('Toque novamente para confirmar a exclusão definitiva', 'info');
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.deleteAccount();
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Screen>
+      <TopBar title="Configurações" />
+
+      <SectionTitle title="Dados corporais" />
+      <Card style={{ gap: space.md }}>
+        <Text variant="caption" tone="secondary">
+          Atualize quando mudar: eles definem com quem seu desempenho é comparado. Ninguém mais os vê.
+        </Text>
+        <View style={{ flexDirection: 'row', gap: space.md }}>
+          <View style={{ flex: 1 }}>
+            <Input label="Altura" value={height} onChangeText={setHeight} keyboardType="decimal-pad" suffix="cm" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Input label="Peso" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" suffix="kg" />
+          </View>
+        </View>
+        <Button title="Salvar" size="md" variant="secondary" onPress={saveBody} loading={update.isPending} />
+      </Card>
+
+      <SectionTitle title="Pontuação" />
+      <Card padded={false}>
+        <ListRow icon="info" title="Como funciona a pontuação" subtitle="Base, bônus, comparação e histórico" onPress={() => router.push('/scoring')} />
+      </Card>
+
+      <SectionTitle title="Privacidade (LGPD)" />
+      <Card padded={false}>
+        <ListRow icon="download" title="Exportar meus dados" subtitle="Cópia completa em JSON (portabilidade)" onPress={exportData} />
+        <Divider />
+        <ListRow
+          icon="trash"
+          title={confirmDelete ? 'Confirmar exclusão definitiva' : 'Excluir minha conta'}
+          subtitle="Remove perfil, check-ins, fotos e votos"
+          danger
+          onPress={busy ? undefined : deleteAccount}
+        />
+      </Card>
+
+      <SectionTitle title="Conta" />
+      <Card padded={false}>
+        <ListRow icon="mail" title={me.data?.email ?? '—'} subtitle={isDemo ? 'Modo demo · dados locais' : 'Conectado ao Supabase'} />
+        <Divider />
+        <ListRow icon="logout" title="Sair" onPress={() => api.auth.signOut()} />
+      </Card>
+
+      <Text variant="caption" tone="muted" align="center" style={{ marginTop: space.xxl }}>
+        ArenaFit 0.1.0 · Projeto de TCC
+      </Text>
+    </Screen>
+  );
+}

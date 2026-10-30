@@ -1,0 +1,43 @@
+# Configuração do Supabase CLI (desenvolvimento local: `npx supabase start`).
+project_id = "arenafit"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[storage]
+enabled = true
+file_size_limit = "5MiB"
+
+[auth]
+enabled = true
+site_url = "arenafit://"
+additional_redirect_urls = ["arenafit://auth-callback", "exp://**", "http://localhost:8081/**"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+
+# Login com Google: crie as credenciais OAuth no Google Cloud Console e exporte
+# SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID / SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET.
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+skip_nonce_check = false
+
+[functions.submit-checkin]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
