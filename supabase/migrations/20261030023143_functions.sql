@@ -7,7 +7,7 @@
 -- -----------------------------------------------------------------------------
 
 create or replace function public.touch_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = '' as $$
 begin
   new.updated_at := now();
   return new;
@@ -20,12 +20,12 @@ create trigger profile_private_touch before update on public.profile_private
 
 -- Mesma curva de nível do motor TS (rewards.ts): XP para o nível L = 5000 × (L − 1)^1,5
 create or replace function public.xp_for_level(p_level int)
-returns bigint language sql immutable as $$
+returns bigint language sql immutable set search_path = '' as $$
   select case when p_level <= 1 then 0 else round(5000 * power((p_level - 1)::numeric, 1.5))::bigint end
 $$;
 
 create or replace function public.level_from_xp(p_xp bigint)
-returns int language plpgsql immutable as $$
+returns int language plpgsql immutable set search_path = '' as $$
 declare
   l int;
 begin
@@ -167,7 +167,8 @@ language sql stable security definer set search_path = '' as $$
   from (
     select distinct on (s.user_id) s.metric, s.height_cm, s.weight_kg, s.age_years
     from public.performance_samples s
-    where s.metric_key = p_metric_key and s.sex = p_sex and s.is_valid
+    -- "prefiro não informar" compara com todos; feminino/masculino só com o próprio sexo.
+    where s.metric_key = p_metric_key and (p_sex = 'unspecified' or s.sex = p_sex) and s.is_valid
       and s.user_id <> p_exclude_user and s.performed_at >= p_since
     order by s.user_id, s.metric desc
   ) best
@@ -207,11 +208,12 @@ begin
   v_day := (v_performed at time zone prof.timezone)::date;
 
   insert into public.checkins (
-    user_id, type, title, notes, performed_at, day, duration_min, distance_km, photo_path, emoji,
+    user_id, type, title, notes, performed_at, day, duration_min, distance_km, variant, elevation_m, photo_path, emoji,
     lat, lng, location_accuracy_m, score, bonus, points, xp, coins, breakdown)
   values (
     v_user, v_type, p ->> 'title', p ->> 'notes', v_performed, v_day,
-    (p ->> 'duration_min')::numeric, (p ->> 'distance_km')::numeric, p ->> 'photo_path', p ->> 'emoji',
+    (p ->> 'duration_min')::numeric, (p ->> 'distance_km')::numeric, p ->> 'variant', (p ->> 'elevation_m')::numeric,
+    p ->> 'photo_path', p ->> 'emoji',
     (p ->> 'lat')::double precision, (p ->> 'lng')::double precision, (p ->> 'location_accuracy_m')::real,
     (p ->> 'score')::numeric, (p ->> 'bonus')::numeric, v_points, v_xp, v_coins,
     coalesce(p -> 'breakdown', '{}'::jsonb))
@@ -408,7 +410,26 @@ returns jsonb language sql stable security definer set search_path = '' as $$
         order by c.performed_at), '[]')
       from public.checkins c where c.user_id = auth.uid()),
     'votes', (select coalesce(jsonb_agg(to_jsonb(v)), '[]') from public.checkin_votes v where v.voter_id = auth.uid()),
+    'workout_templates', (select coalesce(jsonb_agg(to_jsonb(t)), '[]') from public.workout_templates t where t.user_id = auth.uid()),
     'cosmetics', (select coalesce(jsonb_agg(to_jsonb(u)), '[]') from public.user_cosmetics u where u.user_id = auth.uid()),
     'achievements', (select coalesce(jsonb_agg(to_jsonb(a)), '[]') from public.user_achievements a where a.user_id = auth.uid())
   )
 $$;
+
+-- -----------------------------------------------------------------------------
+-- Treinos fixos: limite por usuário e updated_at
+-- -----------------------------------------------------------------------------
+
+create or replace function public.limit_workout_templates()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if (select count(*) from public.workout_templates where user_id = new.user_id) >= 20 then
+    raise exception 'Limite de 20 treinos fixos' using errcode = 'P0001';
+  end if;
+  return new;
+end $$;
+
+create trigger workout_templates_limit before insert on public.workout_templates
+  for each row execute function public.limit_workout_templates();
+create trigger workout_templates_touch before update on public.workout_templates
+  for each row execute function public.touch_updated_at();

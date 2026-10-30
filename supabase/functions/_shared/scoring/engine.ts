@@ -2,7 +2,8 @@ import { type BodyProfile, type ComparisonResult, computeComparison, type Popula
 import { combineScore, computeHistory, type HistoryEntry, type HistoryResult } from './history.ts';
 import { DEFAULT_PARAMS, type ScoringParams } from './params.ts';
 import { bonusFromScore, rewardsFromBonus } from './rewards.ts';
-import { enduranceMetric, runningMetric } from './running.ts';
+import { type ActivityVariant, type CycleVariant, cyclingMetric, swimMetricKey, swimmingMetric, type SwimVariant, walkingMetric } from './endurance.ts';
+import { runningMetric } from './running.ts';
 import { mean, median } from './stats.ts';
 import { type StrengthSet, strengthMetric } from './strength.ts';
 
@@ -20,10 +21,14 @@ export interface ActivityLog {
   exercises?: ExerciseLog[];
   durationMin?: number;
   distanceKm?: number;
+  /** Ciclismo: 'road' | 'indoor'. Natação: 'pool' | 'open_water'. */
+  variant?: ActivityVariant;
+  /** Ciclismo: ganho de elevação acumulado (m). */
+  elevationM?: number;
 }
 
 export interface ExtractedMetric {
-  /** Chave da distribuição: `strength:<exerciseId>`, `run`, `walk`, `cycle`, `swim`. */
+  /** Chave da distribuição: `strength:<exerciseId>`, `run`, `walk`, `cycle`, `swim_pool`, `swim_open`. */
   key: string;
   metric: number;
   exerciseId?: string;
@@ -84,11 +89,18 @@ export function extractMetrics(activity: ActivityLog, params: ScoringParams = DE
       const metric = runningMetric(activity.durationMin ?? 0, activity.distanceKm ?? 0, params);
       return metric === null ? [] : [{ key: 'run', metric }];
     }
-    case 'walk':
-    case 'cycle':
+    case 'walk': {
+      const metric = walkingMetric(activity.durationMin ?? 0, activity.distanceKm ?? 0, params);
+      return metric === null ? [] : [{ key: 'walk', metric }];
+    }
+    case 'cycle': {
+      const variant = activity.variant as CycleVariant | undefined;
+      const metric = cyclingMetric(activity.durationMin ?? 0, activity.distanceKm ?? 0, variant, activity.elevationM, params);
+      return metric === null ? [] : [{ key: 'cycle', metric }];
+    }
     case 'swim': {
-      const metric = enduranceMetric(activity.type, activity.durationMin ?? 0, activity.distanceKm ?? 0);
-      return metric === null ? [] : [{ key: activity.type, metric }];
+      const metric = swimmingMetric(activity.durationMin ?? 0, activity.distanceKm ?? 0, params);
+      return metric === null ? [] : [{ key: swimMetricKey(activity.variant as SwimVariant | undefined), metric }];
     }
   }
 }
@@ -136,7 +148,11 @@ export function scoreCheckin(input: ScoreInput): ScoreBreakdown {
 
   if (metrics.length === 0) {
     S = params.neutralComparison;
-    notes.push('Nenhuma métrica válida para comparação: aplicado fallback neutro (C = 0,50).');
+    notes.push(
+      input.activity.type === 'cycle' && input.activity.variant === 'indoor'
+        ? 'Bike indoor não é comparável entre aparelhos: aplicado bônus neutro (12,5%).'
+        : 'Nenhuma métrica válida para comparação: aplicado fallback neutro (C = 0,50).',
+    );
   } else if (input.activity.type === 'strength') {
     // S_músculo = mediana(Sₑ) ; S_treino = média(S_músculo)
     const byGroup = new Map<string, MetricBreakdown[]>();

@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import type { Sex } from '@/api';
+import type { Me, Sex } from '@/api';
 import { StepHeader } from '@/components/StepHeader';
 import { Button, Card, Chip, Icon, Input, Screen, Text } from '@/components/ui';
 import { useMe, useUpdateProfile } from '@/hooks/queries';
@@ -35,29 +35,23 @@ const slug = (s: string) =>
 
 export default function OnboardingProfile() {
   const { data: me } = useMe();
+  if (!me) return <Screen>{null}</Screen>;
+  return <ProfileForm me={me} />;
+}
+
+/** Monta só com o perfil carregado: o estado inicial vem dele e refetches não apagam o que foi digitado. */
+function ProfileForm({ me }: { me: Me }) {
   const update = useUpdateProfile();
   const toast = useToast();
+  const first = me.profile.display_name ?? me.private.full_name?.split(' ')[0] ?? '';
 
-  const [displayName, setDisplayName] = useState('');
-  const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState(first);
+  const [username, setUsername] = useState(me.profile.username || slug(first));
   const [birth, setBirth] = useState('');
-  const [sex, setSex] = useState<Sex | null>(null);
-  const [height, setHeight] = useState('');
-  const [weight, setWeight] = useState('');
+  const [sex, setSex] = useState<Sex | null>(me.private.sex);
+  const [height, setHeight] = useState(me.private.height_cm ? String(me.private.height_cm) : '');
+  const [weight, setWeight] = useState(me.private.weight_kg ? String(me.private.weight_kg) : '');
   const [consent, setConsent] = useState(false);
-
-  // Pré-preenche uma única vez; refetches do perfil não podem sobrescrever o que foi digitado.
-  const initialized = useRef(false);
-  useEffect(() => {
-    if (!me || initialized.current) return;
-    initialized.current = true;
-    const first = me.profile.display_name ?? me.private.full_name?.split(' ')[0] ?? '';
-    setDisplayName(first);
-    setUsername(me.profile.username || slug(first));
-    if (me.private.sex) setSex(me.private.sex);
-    if (me.private.height_cm) setHeight(String(me.private.height_cm));
-    if (me.private.weight_kg) setWeight(String(me.private.weight_kg));
-  }, [me]);
 
   const h = Number(height.replace(',', '.'));
   const w = Number(weight.replace(',', '.'));
@@ -102,10 +96,16 @@ export default function OnboardingProfile() {
           <Text variant="caption" tone="secondary" style={{ marginLeft: 2 }}>
             Sexo biológico
           </Text>
-          <View style={{ flexDirection: 'row', gap: space.sm }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
             <Chip label="Feminino" selected={sex === 'female'} onPress={() => setSex('female')} />
             <Chip label="Masculino" selected={sex === 'male'} onPress={() => setSex('male')} />
+            <Chip label="Prefiro não informar" selected={sex === 'unspecified'} onPress={() => setSex('unspecified')} />
           </View>
+          {sex === 'unspecified' && (
+            <Text variant="caption" tone="muted" style={{ marginLeft: 2 }}>
+              Você será comparado com todas as pessoas de altura, peso e idade parecidas. Após 3 semanas, a maior parte do score vem da sua própria evolução.
+            </Text>
+          )}
         </View>
 
         <View style={{ flexDirection: 'row', gap: space.md }}>

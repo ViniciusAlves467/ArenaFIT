@@ -6,7 +6,21 @@ import {
   weightedPercentile,
 } from './stats.ts';
 
-export type Sex = 'male' | 'female';
+/**
+ * 'unspecified' = "prefiro não informar". Regra proposta:
+ * - a pessoa é comparada com a POPULAÇÃO GERAL (todos os sexos) do mesmo exercício, ponderada
+ *   pela proximidade de altura, peso e idade — que já explica a maior parte da diferença de
+ *   desempenho entre corpos;
+ * - os registros dela entram apenas na população geral, nunca nas distribuições feminina ou
+ *   masculina, para não deslocá-las;
+ * - após 3 semanas, 65% do score vem do próprio histórico, então a escolha pesa cada vez menos.
+ */
+export type Sex = 'male' | 'female' | 'unspecified';
+
+/** A amostra `s` pertence à população de comparação de quem tem o sexo `viewer`? */
+export function inComparisonPool(viewer: Sex, sample: Sex): boolean {
+  return viewer === 'unspecified' || viewer === sample;
+}
 
 /** Dados corporais usados apenas para formar a população de comparação (seção 4). */
 export interface BodyProfile {
@@ -96,7 +110,7 @@ export function computeComparison(input: ComparisonInput): ComparisonResult {
   const { metric, body, samples, reference, params } = input;
 
   const weighted = samples
-    .filter((s) => s.body.sex === body.sex && Number.isFinite(s.metric) && s.metric > 0)
+    .filter((s) => inComparisonPool(body.sex, s.body.sex) && Number.isFinite(s.metric) && s.metric > 0)
     .map((s) => ({ value: s.metric, weight: similarityWeight(bodyDistance(body, s.body, params.sigma)) }));
 
   const n = weighted.length;

@@ -47,6 +47,31 @@ export interface ScoringParams {
     minPaceMinPerKm: number;
     maxPaceMinPerKm: number;
   };
+  cycling: {
+    /** Expoente de T₂₀ = T × (20/D)^e. Hipótese: 1,05. */
+    exponent: number;
+    /** Distância de referência (km). */
+    refKm: number;
+    /** Km planos equivalentes a cada 100 m de subida. Hipótese: 1. */
+    climbKmPer100m: number;
+    minKm: number;
+    maxKm: number;
+    minSpeedKmh: number;
+    maxSpeedKmh: number;
+    /** Subida máxima plausível por km (m/km). */
+    maxClimbMPerKm: number;
+  };
+  swimming: {
+    /** Expoente de T₁₀₀₀ = T × (1/D)^e. Hipótese: 1,04. */
+    exponent: number;
+    refKm: number;
+    minKm: number;
+    maxKm: number;
+    /** Faixa de ritmo plausível (segundos por 100 m). */
+    minSecPer100m: number;
+    maxSecPer100m: number;
+  };
+  walking: { minKm: number; minSpeedKmh: number; maxSpeedKmh: number };
   strength: {
     /** Repetições máximas aceitas na estimativa de 1RM. Proposta: 30. */
     maxReps: number;
@@ -81,6 +106,9 @@ export const DEFAULT_PARAMS: ScoringParams = {
     minPaceMinPerKm: 2.5,
     maxPaceMinPerKm: 12,
   },
+  cycling: { exponent: 1.05, refKm: 20, climbKmPer100m: 1, minKm: 5, maxKm: 200, minSpeedKmh: 8, maxSpeedKmh: 55, maxClimbMPerKm: 120 },
+  swimming: { exponent: 1.04, refKm: 1, minKm: 0.1, maxKm: 10, minSecPer100m: 55, maxSecPer100m: 240 },
+  walking: { minKm: 0.5, minSpeedKmh: 2, maxSpeedKmh: 9 },
   strength: { maxReps: 30, maxLoadKg: 500 },
   rest: { points: 0, xp: 300 },
   coinsPerWorkout: 10,
@@ -93,6 +121,9 @@ export function withParams(overrides: Partial<ScoringParams> = {}): ScoringParam
     ...overrides,
     sigma: { ...DEFAULT_PARAMS.sigma, ...overrides.sigma },
     running: { ...DEFAULT_PARAMS.running, ...overrides.running },
+    cycling: { ...DEFAULT_PARAMS.cycling, ...overrides.cycling },
+    swimming: { ...DEFAULT_PARAMS.swimming, ...overrides.swimming },
+    walking: { ...DEFAULT_PARAMS.walking, ...overrides.walking },
     strength: { ...DEFAULT_PARAMS.strength, ...overrides.strength },
     rest: { ...DEFAULT_PARAMS.rest, ...overrides.rest },
   };

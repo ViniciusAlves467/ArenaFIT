@@ -6,8 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cosmeticById } from '@/api/catalog';
 import { Avatar, UserTitle } from '@/components/Avatar';
 import { CheckinRow, LevelBar } from '@/components/home';
-import { Button, Card, Divider, EmptyState, IconButton, Screen, SectionTitle, Text } from '@/components/ui';
-import { useAchievements, useMe, useMyCheckins } from '@/hooks/queries';
+import { Button, Card, Divider, EmptyState, IconButton, ListRow, Screen, SectionTitle, Text } from '@/components/ui';
+import { useAchievements, useMe, useMyCheckins, useTemplates } from '@/hooks/queries';
 import { formatNumber } from '@/theme/format';
 import { colors, space } from '@/theme/tokens';
 
@@ -16,6 +16,7 @@ export default function Profile() {
   const me = useMe();
   const checkins = useMyCheckins();
   const achievements = useAchievements();
+  const templates = useTemplates();
   const profile = me.data?.profile;
   if (!profile) return <Screen>{null}</Screen>;
 
@@ -65,6 +66,15 @@ export default function Profile() {
 
         <Card style={{ marginTop: space.lg }}>
           <LevelBar xp={profile.xp} />
+        </Card>
+
+        <Card padded={false} style={{ marginTop: space.md }}>
+          <ListRow
+            icon="dumbbell"
+            title="Treinos fixos"
+            subtitle={templates.data?.length ? `${templates.data.length} salvos · preenchem o check-in em um toque` : 'Monte sua rotina para agilizar o check-in'}
+            onPress={() => router.push('/routines')}
+          />
         </Card>
 
         <SectionTitle title="Histórico" />

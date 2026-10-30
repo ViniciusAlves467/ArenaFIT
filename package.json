@@ -34,6 +34,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~58.0.4",
     "typescript": "~6.0.3",
     "vitest": "^5.0.5"
   },
@@ -44,7 +46,8 @@
     "build:android": "expo run:android",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "simulate": "node --no-warnings scripts/simulate-scoring.mts"
+    "simulate": "node --no-warnings scripts/simulate-scoring.mts",
+    "lint": "expo lint"
   },
   "private": true
 }

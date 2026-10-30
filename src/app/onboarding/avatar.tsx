@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import type { Me } from '@/api';
 import { Avatar } from '@/components/Avatar';
 import { StepHeader } from '@/components/StepHeader';
 import { Button, Card, Input, Screen, Text, TopBar } from '@/components/ui';
@@ -19,18 +20,19 @@ const initials = (name: string) =>
 
 export default function OnboardingAvatar() {
   const { data: me } = useMe();
+  if (!me) return <Screen>{null}</Screen>;
+  return <AvatarForm me={me} />;
+}
+
+function AvatarForm({ me }: { me: Me }) {
   const update = useUpdateProfile();
   const toast = useToast();
-  const [symbol, setSymbol] = useState('');
+  const [symbol, setSymbol] = useState(() => initials(me.private.full_name ?? me.profile.display_name ?? 'AF'));
   const [accent, setAccent] = useState<string>(avatarAccents[0]);
-
-  useEffect(() => {
-    if (me && !symbol) setSymbol(initials(me.private.full_name ?? me.profile.display_name ?? 'AF'));
-  }, [me, symbol]);
 
   const preview = {
     avatar: { symbol, accent },
-    display_name: me?.profile.display_name ?? '',
+    display_name: me.profile.display_name ?? '',
     equipped_frame: null,
     equipped_emblem: 'emblem_bolt',
   };
@@ -60,10 +62,10 @@ export default function OnboardingAvatar() {
       <Card style={styles.previewCard}>
         <Avatar user={preview} size={112} />
         <Text variant="heading" style={{ marginTop: space.lg }}>
-          {me?.profile.display_name}
+          {me.profile.display_name}
         </Text>
         <Text variant="caption" tone="muted">
-          @{me?.profile.username} · Nível 1
+          @{me.profile.username} · Nível 1
         </Text>
       </Card>
 

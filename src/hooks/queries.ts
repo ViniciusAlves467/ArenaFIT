@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { api, type CheckinPayload, type NewGroupInput, type PrivatePatch, type ProfilePatch } from '@/api';
+import { api, type CheckinPayload, type NewGroupInput, type PrivatePatch, type ProfilePatch, type WorkoutTemplateInput } from '@/api';
 import { useAuth } from '@/providers/AuthProvider';
 
 export const qk = {
@@ -16,6 +16,7 @@ export const qk = {
   cosmetics: ['cosmetics'] as const,
   owned: ['cosmetics', 'owned'] as const,
   achievements: ['achievements'] as const,
+  templates: ['templates'] as const,
 };
 
 function useSignedIn() {
@@ -33,6 +34,7 @@ export const useDailyEmoji = () => useQuery({ queryKey: qk.emoji, queryFn: api.g
 export const useMyCheckins = () => useQuery({ queryKey: qk.checkins, queryFn: () => api.listMyCheckins(40), enabled: useSignedIn() });
 export const useCosmetics = () => useQuery({ queryKey: qk.cosmetics, queryFn: api.listCosmetics, staleTime: 30 * 60_000 });
 export const useOwnedCosmetics = () => useQuery({ queryKey: qk.owned, queryFn: api.listOwnedCosmetics });
+export const useTemplates = () => useQuery({ queryKey: qk.templates, queryFn: api.listTemplates, enabled: useSignedIn() });
 export const useAchievements = () => useQuery({ queryKey: qk.achievements, queryFn: api.listAchievements });
 
 export function useUpdateProfile() {
@@ -106,5 +108,21 @@ export function usePurchase() {
       qc.invalidateQueries({ queryKey: qk.owned });
       qc.invalidateQueries({ queryKey: qk.me });
     },
+  });
+}
+
+export function useSaveTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: WorkoutTemplateInput) => api.saveTemplate(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.templates }),
+  });
+}
+
+export function useDeleteTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteTemplate(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.templates }),
   });
 }

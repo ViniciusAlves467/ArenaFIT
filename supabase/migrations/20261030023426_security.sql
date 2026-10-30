@@ -24,6 +24,7 @@ alter table public.performance_samples enable row level security;
 alter table public.reference_quantiles enable row level security;
 alter table public.user_cosmetics enable row level security;
 alter table public.user_achievements enable row level security;
+alter table public.workout_templates enable row level security;
 
 -- Catálogos ---------------------------------------------------------------------
 grant select on public.exercises, public.cosmetics, public.achievements to authenticated;
@@ -81,7 +82,7 @@ create policy "emoji do dia" on public.daily_codes for select to authenticated u
 -- Check-ins ----------------------------------------------------------------------
 -- Coordenadas GPS não são expostas a ninguém pela API (minimização, LGPD art. 6º, III):
 -- o grupo vê apenas `has_location`/precisão. O dono as recebe em export_my_data().
-grant select (id, user_id, type, title, notes, performed_at, day, duration_min, distance_km, photo_path, emoji,
+grant select (id, user_id, type, title, notes, performed_at, day, duration_min, distance_km, variant, elevation_m, photo_path, emoji,
               location_accuracy_m, has_location, score, bonus, points, xp, coins, breakdown, created_at)
   on public.checkins to authenticated;
 -- Helpers SECURITY DEFINER evitam recursão entre as políticas de checkins ↔ checkin_groups.
@@ -138,6 +139,14 @@ create policy "meus cosméticos" on public.user_cosmetics for select to authenti
   using (user_id = (select auth.uid()));
 create policy "conquistas são públicas" on public.user_achievements for select to authenticated using (true);
 
+-- Treinos fixos: privados do dono ------------------------------------------------
+grant select, delete on public.workout_templates to authenticated;
+grant insert (user_id, name, type, variant, exercises, duration_min, distance_km, weekdays, group_ids, position),
+      update (name, type, variant, exercises, duration_min, distance_km, weekdays, group_ids, position)
+  on public.workout_templates to authenticated;
+create policy "meus treinos fixos" on public.workout_templates for all to authenticated
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+
 -- Funções expostas ao cliente ----------------------------------------------------
 grant execute on function public.is_group_member(uuid) to authenticated;
 grant execute on function public.can_view_checkin(uuid) to authenticated;
@@ -169,6 +178,8 @@ returns boolean language sql stable security definer set search_path = '' as $$
     where c.photo_path = p_object_name and public.is_group_member(cg.group_id)
   )
 $$;
+revoke all on function public.can_view_checkin(uuid), public.owns_checkin(uuid), public.can_view_checkin_photo(text)
+  from public, anon;
 grant execute on function public.can_view_checkin_photo(text) to authenticated;
 
 create policy "envia fotos na própria pasta" on storage.objects for insert to authenticated

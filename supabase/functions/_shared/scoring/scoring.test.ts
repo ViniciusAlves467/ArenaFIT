@@ -7,6 +7,8 @@ import {
   computeComparison,
   computeHistory,
   confidence,
+  cyclingMetric,
+  swimmingMetric,
   DEFAULT_PARAMS,
   equivalent5kMinutes,
   estimate1RM,
@@ -314,5 +316,69 @@ describe('Descanso, níveis e streak', () => {
     expect(nextStreak(4, '2026-10-29', '2026-10-30')).toBe(5);
     expect(nextStreak(4, '2026-10-30', '2026-10-30')).toBe(4);
     expect(nextStreak(4, '2026-10-27', '2026-10-30')).toBe(1);
+  });
+});
+
+describe('Ciclismo e natação — modelos dedicados', () => {
+  it('pedal de 20 km no plano: métrica = velocidade média', () => {
+    expect(cyclingMetric(40, 20, 'road', undefined, P)).toBeCloseTo(30, 10);
+  });
+
+  it('pedal mais longo no mesmo ritmo vale mais (resistência)', () => {
+    const short = cyclingMetric(40, 20, 'road', undefined, P)!;
+    const long = cyclingMetric(120, 60, 'road', undefined, P)!;
+    expect(long).toBeGreaterThan(short);
+  });
+
+  it('subida acumulada aumenta a distância equivalente', () => {
+    const flat = cyclingMetric(60, 25, 'road', 0, P)!;
+    const hilly = cyclingMetric(60, 25, 'road', 500, P)!;
+    expect(hilly).toBeGreaterThan(flat);
+  });
+
+  it('bike indoor fica fora do bônus variável (neutro)', () => {
+    expect(cyclingMetric(45, 20, 'indoor', undefined, P)).toBeNull();
+    const r = scoreCheckin({ body, now, firstActivityAt: null, context: {}, activity: { type: 'cycle', variant: 'indoor', durationMin: 45, distanceKm: 20 } });
+    expect(r.performanceEligible).toBe(false);
+    expect(r.points).toBe(56);
+  });
+
+  it('velocidade impossível de bike é descartada', () => {
+    expect(cyclingMetric(10, 20, 'road', undefined, P)).toBeNull(); // 120 km/h
+  });
+
+  it('natação: 1.000 m em 20 min → 50 m/min', () => {
+    expect(swimmingMetric(20, 1, P)).toBeCloseTo(50, 10);
+  });
+
+  it('piscina e águas abertas usam distribuições separadas', () => {
+    const pool = scoreCheckin({ body, now, firstActivityAt: null, context: {}, activity: { type: 'swim', variant: 'pool', durationMin: 30, distanceKm: 1.5 } });
+    const open = scoreCheckin({ body, now, firstActivityAt: null, context: {}, activity: { type: 'swim', variant: 'open_water', durationMin: 30, distanceKm: 1.5 } });
+    expect(pool.metrics[0].key).toBe('swim_pool');
+    expect(open.metrics[0].key).toBe('swim_open');
+  });
+
+  it('ritmo de natação implausível é descartado', () => {
+    expect(swimmingMetric(5, 1, P)).toBeNull(); // 30 s / 100 m
+  });
+});
+
+describe('Sexo "prefiro não informar"', () => {
+  const unspecified: BodyProfile = { ...body, sex: 'unspecified' };
+
+  it('compara com a população geral (todos os sexos)', () => {
+    const samples: PopulationSample[] = [
+      ...Array.from({ length: 30 }, () => ({ metric: 40, body: { ...body, sex: 'female' as const } })),
+      ...Array.from({ length: 30 }, () => ({ metric: 80, body: { ...body, sex: 'male' as const } })),
+    ];
+    const c = computeComparison({ metric: 60, body: unspecified, samples, reference: null, params: P });
+    expect(c.n).toBe(60);
+    expect(c.cApp).toBeCloseTo(0.5, 10);
+  });
+
+  it('registros "não informado" não entram nas distribuições feminina/masculina', () => {
+    const samples: PopulationSample[] = Array.from({ length: 30 }, () => ({ metric: 999, body: unspecified }));
+    const c = computeComparison({ metric: 60, body, samples, reference: null, params: P });
+    expect(c.n).toBe(0);
   });
 });

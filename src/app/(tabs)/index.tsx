@@ -5,7 +5,8 @@ import { isDemo } from '@/api';
 import { Avatar, UserTitle } from '@/components/Avatar';
 import { CheckinRow, GroupTile, LevelBar, WeekStrip } from '@/components/home';
 import { Badge, Button, Card, Divider, EmptyState, Icon, Screen, SectionTitle, StatPill, Text } from '@/components/ui';
-import { useDailyEmoji, useMe, useMyCheckins, useMyGroups, useRanking } from '@/hooks/queries';
+import { useDailyEmoji, useMe, useMyCheckins, useMyGroups, useRanking, useTemplates } from '@/hooks/queries';
+import { templateSummary, templatesForToday } from '@/lib/routines';
 import { formatNumber, greeting, localDay } from '@/theme/format';
 import { colors, space } from '@/theme/tokens';
 
@@ -63,11 +64,13 @@ export default function Home() {
   const groups = useMyGroups();
   const checkins = useMyCheckins();
   const emoji = useDailyEmoji();
+  const templates = useTemplates();
 
   if (!me.data) return <Screen>{null}</Screen>;
   const { profile } = me.data;
   const todayDone = (checkins.data ?? []).some((c) => localDay(new Date(c.performed_at)) === localDay());
   const favorite = profile.favorite_group_id ?? groups.data?.[0]?.id;
+  const todays = templatesForToday(templates.data ?? []);
 
   const refresh = () => Promise.all([me.refetch(), groups.refetch(), checkins.refetch()]);
 
@@ -99,7 +102,7 @@ export default function Home() {
               {todayDone ? 'Check-in feito hoje' : 'Treino de hoje'}
             </Text>
             <Text variant="title" style={{ fontSize: 20 }}>
-              {todayDone ? 'Mandou bem. Descanso também conta.' : 'Registre e pontue'}
+              {todayDone ? 'Mandou bem. Descanso também conta.' : todays.length ? 'Hoje é dia de:' : 'Registre e pontue'}
             </Text>
             <Text variant="caption" tone="secondary">
               Mostre o emoji do dia na foto para validar nos grupos.
@@ -112,7 +115,27 @@ export default function Home() {
             </Text>
           </View>
         </View>
-        <Button title={todayDone ? 'Registrar outro treino' : 'Fazer check-in'} icon="camera" variant={todayDone ? 'secondary' : 'primary'} onPress={() => router.push('/checkin/new')} />
+        {todays.length > 0 && !todayDone ? (
+          <View style={{ gap: space.sm }}>
+            {todays.map((t) => (
+              <Card key={t.id} onPress={() => router.push({ pathname: '/checkin/new', params: { template: t.id } })} style={styles.todayTemplate}>
+                <Icon name={t.type} size={20} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyStrong" numberOfLines={1}>
+                    {t.name}
+                  </Text>
+                  <Text variant="caption" tone="muted" numberOfLines={1}>
+                    {templateSummary(t)}
+                  </Text>
+                </View>
+                <Icon name="chevron-right" size={18} color={colors.textMuted} />
+              </Card>
+            ))}
+            <Button title="Outro treino" icon="camera" variant="secondary" onPress={() => router.push('/checkin/new')} />
+          </View>
+        ) : (
+          <Button title={todayDone ? 'Registrar outro treino' : 'Fazer check-in'} icon="camera" variant={todayDone ? 'secondary' : 'primary'} onPress={() => router.push('/checkin/new')} />
+        )}
         <Divider />
         <WeekStrip checkins={checkins.data ?? []} goal={profile.weekly_goal} />
       </Card>
@@ -189,6 +212,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 2,
   },
+  todayTemplate: { flexDirection: 'row', alignItems: 'center', gap: space.md, backgroundColor: colors.surface2, paddingVertical: space.md },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   favHeader: { flexDirection: 'row', alignItems: 'center' },
   rankRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: 6, paddingHorizontal: space.sm, borderRadius: 10 },

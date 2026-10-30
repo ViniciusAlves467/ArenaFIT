@@ -7,7 +7,8 @@
 
 create extension if not exists pgcrypto with schema extensions;
 
-create type public.sex as enum ('male', 'female');
+-- 'unspecified' = "prefiro não informar": compara com a população geral (ver scoring/comparison.ts).
+create type public.sex as enum ('male', 'female', 'unspecified');
 create type public.activity_type as enum ('strength', 'run', 'walk', 'cycle', 'swim', 'rest');
 create type public.checkin_status as enum ('approved', 'rejected');
 create type public.vote_kind as enum ('approve', 'reject');
@@ -151,6 +152,9 @@ create table public.checkins (
   day date not null,
   duration_min numeric(6, 1) check (duration_min is null or duration_min between 1 and 1440),
   distance_km numeric(6, 2) check (distance_km is null or distance_km between 0.01 and 500),
+  -- ciclismo: road | indoor · natação: pool | open_water
+  variant text check (variant is null or variant in ('road', 'indoor', 'pool', 'open_water')),
+  elevation_m numeric(6, 0) check (elevation_m is null or elevation_m between 0 and 20000),
   photo_path text,
   emoji text,
   lat double precision check (lat is null or lat between -90 and 90),
@@ -250,3 +254,27 @@ create table public.user_achievements (
   completed_at timestamptz,
   primary key (user_id, achievement_id)
 );
+
+-- -----------------------------------------------------------------------------
+-- Treinos fixos: modelos que o usuário reutiliza no check-in (ex.: "Treino A — Peito")
+-- -----------------------------------------------------------------------------
+
+create table public.workout_templates (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 40),
+  type public.activity_type not null,
+  variant text check (variant is null or variant in ('road', 'indoor', 'pool', 'open_water')),
+  -- [{ "exerciseId": "bench_press_barbell", "sets": [{ "loadKg": 40, "reps": 10 }] }]
+  exercises jsonb not null default '[]'::jsonb check (jsonb_typeof(exercises) = 'array' and jsonb_array_length(exercises) <= 20),
+  duration_min numeric(6, 1) check (duration_min is null or duration_min between 1 and 1440),
+  distance_km numeric(6, 2) check (distance_km is null or distance_km between 0.01 and 500),
+  -- dias da semana sugeridos (0 = domingo … 6 = sábado)
+  weekdays smallint[] not null default '{}' check (weekdays <@ array[0, 1, 2, 3, 4, 5, 6]::smallint[]),
+  -- grupos em que o check-in é publicado por padrão
+  group_ids uuid[] not null default '{}' check (cardinality(group_ids) <= 10),
+  position int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index workout_templates_user_idx on public.workout_templates (user_id, position);

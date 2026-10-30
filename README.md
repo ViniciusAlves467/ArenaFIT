@@ -18,29 +18,41 @@ npm start
 
 Abra no celular com o app **Expo Go** (QR code no terminal) ou pressione `w` para abrir no navegador. No demo, qualquer e-mail/senha entra; "Criar conta" passa pelo onboarding.
 
-## Conectando ao Supabase
+## Projeto Supabase (já configurado)
 
-1. Crie um projeto em [supabase.com](https://supabase.com).
-2. Aplique as migrations e publique as Edge Functions com a CLI:
+O projeto **ArenaFIT** (`xainescjcawmvarsjumc`, São Paulo) já tem o schema, a RLS, os catálogos, o bucket de fotos e as Edge Functions `submit-checkin` e `delete-account` publicados. Para o app usar o banco real, crie `.env.local` a partir do `.env.example`:
 
-   ```bash
-   npx supabase login
-   ```
+```
+EXPO_PUBLIC_SUPABASE_URL=https://xainescjcawmvarsjumc.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Project Settings → API Keys → Publishable key>
+```
 
-   ```bash
-   npx supabase link --project-ref SEU_PROJECT_REF
-   ```
+Sem esse arquivo o app volta ao modo demo.
 
-   ```bash
-   npx supabase db push
-   ```
+**Falta configurar no painel (não dá para fazer por API):**
 
-   ```bash
-   npx supabase functions deploy submit-checkin delete-account
-   ```
+- Authentication → URL Configuration: *Site URL* `arenafit://` e, em *Redirect URLs*, `arenafit://auth-callback`, `exp://**` e `http://localhost:8081/**`.
+- Authentication → Providers → Google: Client ID e Secret do Google Cloud (tela de consentimento OAuth + credencial "Aplicativo da Web", com a callback `https://xainescjcawmvarsjumc.supabase.co/auth/v1/callback`).
 
-3. Copie `.env.example` para `.env.local` e preencha `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Project Settings → API).
-4. **Login com Google:** em Authentication → Providers → Google, informe o Client ID/Secret do Google Cloud. Em Authentication → URL Configuration adicione `arenafit://auth-callback` (e `exp://**` para testar no Expo Go) às Redirect URLs.
+## Publicando mudanças no Supabase
+
+Novas migrations e funções podem ser aplicadas com a CLI:
+
+```bash
+npx supabase login
+```
+
+```bash
+npx supabase link --project-ref xainescjcawmvarsjumc
+```
+
+```bash
+npx supabase db push
+```
+
+```bash
+npx supabase functions deploy submit-checkin delete-account
+```
 
 Desenvolvimento local completo (Docker): `npx supabase start` sobe Postgres/Auth/Storage locais usando `supabase/config.toml`.
 
@@ -51,6 +63,7 @@ Desenvolvimento local completo (Docker): `npx supabase start` sobe Postgres/Auth
 | `npm start` | Servidor de desenvolvimento (Expo Go / web) |
 | `npm test` | Testes do motor de pontuação e da validação de check-in (Vitest) |
 | `npm run typecheck` | Checagem de tipos |
+| `npm run lint` | ESLint (regras do Expo + React Compiler) |
 | `npm run simulate` | Simulação do modelo para o TCC (cold start e distribuição dos bônus — seção 14 do estudo) |
 | `npm run build:android` | Build nativo local (requer Android SDK). Para APK na nuvem: `npx eas-cli build -p android` |
 
@@ -62,6 +75,7 @@ src/
     (auth)/            Boas-vindas, login, cadastro
     onboarding/        Dados corporais + consentimento LGPD, avatar
     (tabs)/            Início, Grupos, Desafios, Perfil
+    routines/          Treinos fixos (lista e editor)
     group/  checkin/   Grupo (ranking + feed de validação), novo check-in, resultado
     shop, settings, scoring
   api/                 Contrato da API + implementação Supabase e demo

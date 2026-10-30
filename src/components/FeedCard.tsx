@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { EXERCISES } from '@/api/catalog';
@@ -26,7 +27,8 @@ export function FeedCard({
   const rejected = item.status === 'rejected';
   const exercises = [...new Set(c.sets.map((s) => s.exercise_id))];
   const pace = c.type === 'run' && c.duration_min && c.distance_km ? formatPace(c.duration_min, c.distance_km) : null;
-  const votingOpen = Date.now() - new Date(c.performed_at).getTime() < 48 * 3_600_000;
+  const [mountedAt] = useState(() => Date.now());
+  const votingOpen = mountedAt - new Date(c.performed_at).getTime() < 48 * 3_600_000;
 
   return (
     <View style={[styles.card, rejected && { opacity: 0.6 }]}>

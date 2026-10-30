@@ -11,6 +11,8 @@ As referências do documento de funcionalidades tinham cara de jogo infantil (az
 
 ## Sugestões para o produto
 
+0. **Treinos fixos** (implementado): o usuário monta o Treino A/B/C ou a corrida de sábado, com cargas, dias da semana e grupos. No dia marcado ele aparece na tela inicial e o check-in já vem preenchido. Próximo passo natural: sugerir aumento de carga quando o usuário bate as repetições do treino fixo duas vezes seguidas (progressão).
+
 1. **Meta semanal em vez de só streak diária.** Streak diária pune o descanso e incentiva treinar lesionado. A tela Desafios já tem meta semanal ajustável; sugiro que ela vire a principal métrica de constância e que a streak diária conte o check-in de descanso (já implementado).
 2. **Transparência da pontuação.** A tela de resultado mostra o bônus, a comparação e o histórico de cada exercício. Bom argumento para a banca (explicabilidade, seção 12 passo 16) e combate a sensação de "algoritmo injusto".
 3. **Ranking por divisões em grupos grandes.** Em grupos públicos com muita gente, quem está no fim do ranking desanima (o próprio TCC cita esse risco). Sugestão: divisões de 20 pessoas com promoção/rebaixamento semanal, como no Duolingo.
@@ -24,10 +26,11 @@ As referências do documento de funcionalidades tinham cara de jogo infantil (az
 | Tema | Situação | O que precisa ser decidido |
 | --- | --- | --- |
 | Base inicial de referência (C_inicial) | Tabela pronta, vazia | Fonte de dados com licença (ex.: estudos publicados de 1RM por peso/idade, datasets abertos de corrida). Sem isso, fica o neutro. |
-| Modalidades além de musculação e corrida | Proposta provisória (velocidade média) | Modelo próprio para natação, ciclismo e caminhada, ou mantê-las só com a base de pontos. |
-| Sexo para comparação | Feminino/Masculino | Como tratar pessoas que não se identificam com essas opções (ex.: comparar sem filtro de sexo). |
+| Ciclismo e natação | Modelos dedicados implementados (ver PONTUACAO.md) | Calibrar os expoentes 1,05 e 1,04 com dados reais. |
+| Sexo para comparação | Feminino, Masculino ou Prefiro não informar (população geral) | Validar a regra com a orientação do TCC. |
 | Mínimo de registros históricos | 3 (proposta) | Validar por simulação, como o estudo indica. |
-| Moedas, níveis, recompensas de descanso | Propostas implementadas | Confirmar valores de economia (preço dos itens × moedas por treino). |
+| Moedas e recompensas de descanso | Propostas implementadas | Confirmar valores de economia (preço dos itens × moedas por treino). |
+| Curva de níveis | 5000 × (L−1)^1,5 (não estava nos documentos) | Confirmar com a equipe. |
 | Regra de reprovação | Proposta implementada | Quórum mínimo e prazo de votação. |
 | Faixa etária mínima | 13 anos no cadastro | Menores de 18 exigem consentimento dos responsáveis (LGPD art. 14). |
 | Moderação de fotos | Não implementada | Denúncia de foto imprópria e remoção pelo dono do grupo. |

@@ -59,3 +59,16 @@ describe('checkGroupRequirements', () => {
     expect(checkGroupRequirements(payload, [group], '🤘')).toEqual([]);
   });
 });
+
+describe('variantes e elevação', () => {
+  it('ciclismo assume "road" por padrão e aceita elevação', () => {
+    const r = validateCheckinPayload({ type: 'cycle', durationMin: 60, distanceKm: 25, elevationM: 300 }, { userId, now });
+    expect(r.ok && r.value.variant).toBe('road');
+    expect(r.ok && r.value.elevationM).toBe(300);
+  });
+
+  it('rejeita variante de outra modalidade e elevação fora do ciclismo', () => {
+    expect(validateCheckinPayload({ type: 'swim', durationMin: 30, distanceKm: 1, variant: 'road' }, { userId, now }).ok).toBe(false);
+    expect(validateCheckinPayload({ type: 'run', durationMin: 30, distanceKm: 5, elevationM: 100 }, { userId, now }).ok).toBe(false);
+  });
+});

@@ -1,6 +1,6 @@
 import { levelProgress, xpForLevel } from '@shared/scoring/index.ts';
 import { Redirect, router } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
 import { BonusGauge, ScoreExplanation } from '@/components/ScoreExplanation';
@@ -13,8 +13,8 @@ import { colors, radius, space } from '@/theme/tokens';
 export default function CheckinResult() {
   const result = getLastCheckinResult();
   const groups = useMyGroups();
-  const scale = useRef(new Animated.Value(0.85)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [scale] = useState(() => new Animated.Value(0.85));
+  const [opacity] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     Animated.parallel([

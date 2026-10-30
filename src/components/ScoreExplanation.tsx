@@ -9,12 +9,17 @@ import { Divider, Text } from './ui';
 
 const metricName = (m: MetricBreakdown) => {
   if (m.exerciseId) return EXERCISES.find((e) => e.id === m.exerciseId)?.name ?? m.exerciseId;
-  return { run: 'Corrida', walk: 'Caminhada', cycle: 'Ciclismo', swim: 'Natação' }[m.key] ?? m.key;
+  return { run: 'Corrida', walk: 'Caminhada', cycle: 'Ciclismo', swim_pool: 'Natação (piscina)', swim_open: 'Natação (águas abertas)' }[m.key] ?? m.key;
 };
 
 const metricValue = (m: MetricBreakdown) => {
   if (m.key.startsWith('strength:')) return `1RM est. ${formatDecimal(m.metric, 1)} kg`;
   if (m.key === 'run') return `equiv. 5 km em ${formatDecimal(300 / m.metric, 1)} min`;
+  if (m.key === 'cycle') return `equiv. ${formatDecimal(m.metric, 1)} km/h num pedal de 20 km`;
+  if (m.key.startsWith('swim')) {
+    const sec = 6000 / m.metric; // 100 m a M m/min
+    return `equiv. ${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')} /100 m em 1.000 m`;
+  }
   return `${formatDecimal(m.metric, 1)} km/h`;
 };
 
@@ -29,6 +34,8 @@ function comparisonText(m: MetricBreakdown) {
       return `Base do app (peso ${formatPercent(c.alpha, 0)}) + ${c.initialIsNeutral ? 'posição neutra' : 'referência inicial'}.`;
     case 'app':
       return 'Comparado a pessoas do app com perfil parecido.';
+    default:
+      return '';
   }
 }
 

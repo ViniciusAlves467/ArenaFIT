@@ -25,27 +25,3 @@ export function runningMetric(timeMin: number, distanceKm: number, params: Scori
   if (runEligibility(timeMin, distanceKm, params) !== 'ok') return null;
   return runningMetricFromT5(equivalent5kMinutes(timeMin, distanceKm, params.running.exponent));
 }
-
-/**
- * Caminhada, ciclismo e natação ainda não têm modelo próprio no estudo.
- * Proposta provisória: velocidade média (km/h) dentro do mesmo pipeline de comparação,
- * com faixas de plausibilidade por modalidade. Sem referência inicial, cai no neutro.
- */
-export const ENDURANCE_SPEED_RANGES: Record<'walk' | 'cycle' | 'swim', { min: number; max: number; minKm: number }> = {
-  walk: { min: 2, max: 9, minKm: 0.5 },
-  cycle: { min: 5, max: 60, minKm: 2 },
-  swim: { min: 0.5, max: 7, minKm: 0.1 },
-};
-
-export function enduranceMetric(
-  kind: 'walk' | 'cycle' | 'swim',
-  timeMin: number,
-  distanceKm: number,
-): number | null {
-  if (!(timeMin > 0) || !(distanceKm > 0)) return null;
-  const range = ENDURANCE_SPEED_RANGES[kind];
-  if (distanceKm < range.minKm) return null;
-  const speed = distanceKm / (timeMin / 60);
-  if (speed < range.min || speed > range.max) return null;
-  return speed;
-}

@@ -100,6 +100,8 @@ function RootNavigator() {
         <Stack.Screen name="group/join" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="checkin/new" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="checkin/result" options={{ gestureEnabled: false, animation: 'fade' }} />
+        <Stack.Screen name="routines/index" />
+        <Stack.Screen name="routines/edit" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="shop" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="scoring" />

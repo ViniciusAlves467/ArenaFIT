@@ -17,13 +17,15 @@ import type {
   Me,
   PublicGroup,
   RankingEntry,
+  WorkoutTemplate,
 } from './types';
 
 const PHOTO_BUCKET = 'checkin-photos';
 const PUBLIC_PROFILE = 'id, username, display_name, avatar, equipped_frame, equipped_title, equipped_emblem, level';
 // Nunca usar `*` em checkins: lat/lng não são legíveis pela API (ver migration de segurança).
 const CHECKIN_COLUMNS =
-  'id, user_id, type, title, notes, performed_at, day, duration_min, distance_km, photo_path, emoji, has_location, points, xp, coins, bonus, breakdown';
+  'id, user_id, type, title, notes, performed_at, day, duration_min, distance_km, variant, elevation_m, photo_path, emoji, has_location, points, xp, coins, bonus, breakdown';
+const TEMPLATE_COLUMNS = 'id, name, type, variant, exercises, duration_min, distance_km, weekdays, group_ids, position';
 
 const sb = () => requireSupabase();
 
@@ -272,6 +274,29 @@ export const supabaseApi: Api = {
     return check(
       await sb().from('checkins').select(CHECKIN_COLUMNS).eq('user_id', await uid()).order('performed_at', { ascending: false }).limit(limit),
     ) as unknown as Checkin[];
+  },
+
+  async listTemplates(): Promise<WorkoutTemplate[]> {
+    return check(
+      await sb().from('workout_templates').select(TEMPLATE_COLUMNS).eq('user_id', await uid()).order('position').order('created_at'),
+    ) as unknown as WorkoutTemplate[];
+  },
+
+  async saveTemplate({ id, ...input }) {
+    const row = {
+      ...input,
+      duration_min: input.duration_min ?? null,
+      distance_km: input.distance_km ?? null,
+      variant: input.variant ?? null,
+    };
+    const res = id
+      ? await sb().from('workout_templates').update(row).eq('id', id).select(TEMPLATE_COLUMNS).single()
+      : await sb().from('workout_templates').insert({ ...row, user_id: await uid() }).select(TEMPLATE_COLUMNS).single();
+    return check(res) as unknown as WorkoutTemplate;
+  },
+
+  async deleteTemplate(id) {
+    check(await sb().from('workout_templates').delete().eq('id', id));
   },
 
   async listCosmetics(): Promise<Cosmetic[]> {

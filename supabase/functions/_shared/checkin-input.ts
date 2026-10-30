@@ -2,10 +2,14 @@
  * Contrato e validação do payload de check-in (cliente → Edge Function `submit-checkin`).
  * Código puro: roda no app (validação antecipada) e no servidor (validação definitiva).
  */
-import type { ActivityType } from './scoring/index.ts';
+import type { ActivityType, ActivityVariant } from './scoring/index.ts';
 
 export const ACTIVITY_TYPES: ActivityType[] = ['strength', 'run', 'walk', 'cycle', 'swim', 'rest'];
 export const CARDIO_TYPES: ActivityType[] = ['run', 'walk', 'cycle', 'swim'];
+export const VARIANTS: Partial<Record<ActivityType, ActivityVariant[]>> = {
+  cycle: ['road', 'indoor'],
+  swim: ['pool', 'open_water'],
+};
 
 export interface CheckinSetInput {
   loadKg: number;
@@ -25,6 +29,10 @@ export interface CheckinPayload {
   performedAt?: string;
   durationMin?: number;
   distanceKm?: number;
+  /** Ciclismo: 'road' | 'indoor'. Natação: 'pool' | 'open_water'. */
+  variant?: ActivityVariant;
+  /** Ciclismo: ganho de elevação acumulado (m). */
+  elevationM?: number;
   exercises?: CheckinExerciseInput[];
   /** Caminho no bucket `checkin-photos`, sempre `<user_id>/<arquivo>`. */
   photoPath?: string;
@@ -99,6 +107,21 @@ export function validateCheckinPayload(raw: unknown, opts: { userId: string; now
     errors.push('Duração inválida');
   }
 
+  let variant: ActivityVariant | undefined;
+  const allowed = VARIANTS[type];
+  if (allowed) {
+    variant = (p.variant ?? allowed[0]) as ActivityVariant;
+    if (!allowed.includes(variant)) errors.push('Variante da atividade inválida');
+  } else if (p.variant !== undefined) {
+    errors.push('Esta atividade não tem variante');
+  }
+
+  let elevationM: number | undefined;
+  if (p.elevationM !== undefined && p.elevationM !== null) {
+    if (type !== 'cycle' || !between(p.elevationM, 0, 20000)) errors.push('Elevação inválida');
+    else elevationM = p.elevationM as number;
+  }
+
   if (p.photoPath !== undefined) {
     if (typeof p.photoPath !== 'string' || !p.photoPath.startsWith(`${opts.userId}/`) || p.photoPath.includes('..')) {
       errors.push('Foto inválida');
@@ -130,6 +153,8 @@ export function validateCheckinPayload(raw: unknown, opts: { userId: string; now
       performedAt,
       durationMin: isNum(p.durationMin) ? p.durationMin : undefined,
       distanceKm: isNum(p.distanceKm) ? p.distanceKm : undefined,
+      variant,
+      elevationM,
       exercises: type === 'strength' ? exercises : undefined,
       photoPath: p.photoPath as string | undefined,
       emoji: p.emoji as string | undefined,

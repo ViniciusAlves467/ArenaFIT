@@ -70,7 +70,14 @@ Deno.serve(async (req) => {
   }
 
   const performedAt = payload.performedAt ? new Date(payload.performedAt) : now;
-  const activity = { type: payload.type, exercises, durationMin: payload.durationMin, distanceKm: payload.distanceKm };
+  const activity = {
+    type: payload.type,
+    exercises,
+    durationMin: payload.durationMin,
+    distanceKm: payload.distanceKm,
+    variant: payload.variant,
+    elevationM: payload.elevationM,
+  };
   const metrics = extractMetrics(activity, DEFAULT_PARAMS);
 
   const body: BodyProfile | null =
@@ -140,6 +147,8 @@ Deno.serve(async (req) => {
       performed_at: performedAt.toISOString(),
       duration_min: payload.durationMin,
       distance_km: payload.distanceKm,
+      variant: payload.variant,
+      elevation_m: payload.elevationM,
       photo_path: payload.photoPath,
       emoji: payload.emoji,
       lat: payload.location?.lat,

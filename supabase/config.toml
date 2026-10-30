@@ -1,5 +1,5 @@
 # Configuração do Supabase CLI (desenvolvimento local: `npx supabase start`).
-project_id = "arenafit"
+project_id = "xainescjcawmvarsjumc"
 
 [api]
 enabled = true

@@ -1,4 +1,4 @@
-import { bonusFromScore, DEFAULT_PARAMS, rewardsFromBonus } from '@shared/scoring/index.ts';
+import { bonusFromScore, DEFAULT_PARAMS, rewardsFromBonus, xpForLevel } from '@shared/scoring/index.ts';
 import { StyleSheet, View } from 'react-native';
 
 import { Card, Divider, Icon, type IconName, Screen, SectionTitle, Text, TopBar } from '@/components/ui';
@@ -27,6 +27,8 @@ export default function Scoring() {
     const B = bonusFromScore(S, DEFAULT_PARAMS);
     return { S, B, ...rewardsFromBonus(B, DEFAULT_PARAMS) };
   });
+
+  const levels = [2, 3, 5, 10, 15, 20, 30].map((level) => ({ level, xp: xpForLevel(level), workouts: Math.round(xpForLevel(level) / 1125) }));
 
   return (
     <Screen>
@@ -92,6 +94,15 @@ export default function Scoring() {
         <Point icon="run" title="Corrida">
           Distâncias diferentes são convertidas num tempo equivalente de 5 km, para que 5 e 10 km sejam comparáveis.
         </Point>
+        <Point icon="cycle" title="Ciclismo">
+          Ao ar livre, o pedal vira uma velocidade equivalente em 20 km, e cada 100 m de subida contam como 1 km no plano. Bike indoor vale base + bônus neutro, porque a distância muda de aparelho para aparelho.
+        </Point>
+        <Point icon="swim" title="Natação">
+          O tempo é convertido num ritmo equivalente em 1.000 m. Piscina e águas abertas são comparadas separadamente.
+        </Point>
+        <Point icon="users" title="Prefiro não informar o sexo">
+          Você é comparado com todas as pessoas de corpo parecido (altura, peso, idade). Seus registros não alteram as bases feminina e masculina.
+        </Point>
         <Point icon="shield" title="Começo justo">
           Enquanto o app tem poucos usuários, a comparação parte de uma posição neutra e migra gradualmente para os dados reais.
         </Point>
@@ -99,6 +110,36 @@ export default function Scoring() {
           Check-ins reprovados pela maioria do grupo perdem os pontos e deixam de contar nas estatísticas.
         </Point>
       </Card>
+
+      <SectionTitle title="Níveis" />
+      <Card padded={false}>
+        <View style={styles.row}>
+          {['Nível', 'XP total', 'Treinos*'].map((h) => (
+            <Text key={h} variant="overline" tone="muted" style={styles.cell}>
+              {h}
+            </Text>
+          ))}
+        </View>
+        {levels.map((l) => (
+          <View key={l.level}>
+            <Divider />
+            <View style={styles.row}>
+              <Text variant="bodyStrong" style={styles.cell}>
+                {l.level}
+              </Text>
+              <Text variant="body" style={styles.cell}>
+                {formatNumber(l.xp)}
+              </Text>
+              <Text variant="body" tone="secondary" style={styles.cell}>
+                ~{formatNumber(l.workouts)}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </Card>
+      <Text variant="caption" tone="muted" style={{ marginTop: space.sm }}>
+        *Considerando ~1.125 XP por treino. Cada nível pede um pouco mais que o anterior, mas nunca uma parede: no ritmo de 4 treinos por semana, o nível 10 chega em cerca de 7 meses.
+      </Text>
 
       <Text variant="caption" tone="muted" align="center" style={{ marginTop: space.xl }}>
         Modelo de gamificação — não é avaliação médica ou física.

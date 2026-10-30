@@ -4,5 +4,6 @@ export * from './comparison.ts';
 export * from './history.ts';
 export * from './strength.ts';
 export * from './running.ts';
+export * from './endurance.ts';
 export * from './rewards.ts';
 export * from './engine.ts';

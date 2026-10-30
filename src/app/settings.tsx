@@ -1,28 +1,27 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Share, View } from 'react-native';
 
-import { api, isDemo } from '@/api';
-import { Button, Card, Divider, Input, ListRow, Screen, SectionTitle, Text, TopBar } from '@/components/ui';
+import { api, isDemo, type Me, type Sex } from '@/api';
+import { Button, Card, Chip, Divider, Input, ListRow, Screen, SectionTitle, Text, TopBar } from '@/components/ui';
 import { useMe, useUpdateProfile } from '@/hooks/queries';
 import { useToast } from '@/providers/ToastProvider';
 import { space } from '@/theme/tokens';
 
 export default function Settings() {
   const me = useMe();
+  if (!me.data) return <Screen><TopBar title="Configurações" /></Screen>;
+  return <SettingsForm me={me.data} />;
+}
+
+function SettingsForm({ me }: { me: Me }) {
   const update = useUpdateProfile();
   const toast = useToast();
-  const [height, setHeight] = useState('');
-  const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState(String(me.private.height_cm ?? ''));
+  const [weight, setWeight] = useState(String(me.private.weight_kg ?? ''));
+  const [sex, setSex] = useState<Sex | null>(me.private.sex);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (me.data) {
-      setHeight(String(me.data.private.height_cm ?? ''));
-      setWeight(String(me.data.private.weight_kg ?? ''));
-    }
-  }, [me.data]);
 
   async function saveBody() {
     const h = Number(height.replace(',', '.'));
@@ -32,7 +31,7 @@ export default function Settings() {
       return;
     }
     try {
-      await update.mutateAsync({ priv: { height_cm: h, weight_kg: w } });
+      await update.mutateAsync({ priv: { height_cm: h, weight_kg: w, ...(sex ? { sex } : {}) } });
       toast('Dados atualizados', 'success');
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -81,6 +80,11 @@ export default function Settings() {
             <Input label="Peso" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" suffix="kg" />
           </View>
         </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+          <Chip label="Feminino" selected={sex === 'female'} onPress={() => setSex('female')} />
+          <Chip label="Masculino" selected={sex === 'male'} onPress={() => setSex('male')} />
+          <Chip label="Prefiro não informar" selected={sex === 'unspecified'} onPress={() => setSex('unspecified')} />
+        </View>
         <Button title="Salvar" size="md" variant="secondary" onPress={saveBody} loading={update.isPending} />
       </Card>
 
@@ -104,7 +108,7 @@ export default function Settings() {
 
       <SectionTitle title="Conta" />
       <Card padded={false}>
-        <ListRow icon="mail" title={me.data?.email ?? '—'} subtitle={isDemo ? 'Modo demo · dados locais' : 'Conectado ao Supabase'} />
+        <ListRow icon="mail" title={me.email ?? '—'} subtitle={isDemo ? 'Modo demo · dados locais' : 'Conectado ao Supabase'} />
         <Divider />
         <ListRow icon="logout" title="Sair" onPress={() => api.auth.signOut()} />
       </Card>

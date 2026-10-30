@@ -1,7 +1,7 @@
 import type { CheckinPayload } from '@shared/checkin-input.ts';
-import type { ActivityType, ScoreBreakdown, Sex } from '@shared/scoring/index.ts';
+import type { ActivityType, ActivityVariant, ScoreBreakdown, Sex } from '@shared/scoring/index.ts';
 
-export type { ActivityType, CheckinPayload, ScoreBreakdown, Sex };
+export type { ActivityType, ActivityVariant, CheckinPayload, ScoreBreakdown, Sex };
 
 export interface AvatarConfig {
   /** Até 2 letras (iniciais) exibidas no avatar. */
@@ -130,6 +130,8 @@ export interface Checkin {
   day: string;
   duration_min: number | null;
   distance_km: number | null;
+  variant: ActivityVariant | null;
+  elevation_m: number | null;
   photo_path: string | null;
   emoji: string | null;
   has_location: boolean;
@@ -195,6 +197,23 @@ export interface CheckinResult {
   breakdown: ScoreBreakdown;
 }
 
+/** Treino fixo: modelo reutilizável no check-in. */
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  type: ActivityType;
+  variant: ActivityVariant | null;
+  exercises: { exerciseId: string; sets: { loadKg: number; reps: number }[] }[];
+  duration_min: number | null;
+  distance_km: number | null;
+  /** 0 = domingo … 6 = sábado */
+  weekdays: number[];
+  group_ids: string[];
+  position: number;
+}
+
+export type WorkoutTemplateInput = Omit<WorkoutTemplate, 'id' | 'position'> & { id?: string };
+
 export interface Session {
   userId: string;
   email: string | null;
@@ -230,6 +249,10 @@ export interface Api {
   uploadCheckinPhoto(localUri: string): Promise<string>;
   submitCheckin(payload: CheckinPayload): Promise<CheckinResult>;
   listMyCheckins(limit?: number): Promise<Checkin[]>;
+
+  listTemplates(): Promise<WorkoutTemplate[]>;
+  saveTemplate(input: WorkoutTemplateInput): Promise<WorkoutTemplate>;
+  deleteTemplate(id: string): Promise<void>;
 
   listCosmetics(): Promise<Cosmetic[]>;
   listOwnedCosmetics(): Promise<string[]>;

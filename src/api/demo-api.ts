@@ -30,6 +30,7 @@ import type {
   Profile,
   PublicProfile,
   Session,
+  WorkoutTemplate,
 } from './types';
 
 const ME = 'demo-me';
@@ -192,6 +193,29 @@ function createState() {
     checkinGroups: [] as CheckinGroupRow[],
     votes: [] as VoteRow[],
     owned: new Set<string>(['frame_steel', 'title_steady', 'banner_sunset']),
+    templates: [
+      {
+        id: 't-a', name: 'Treino A — Peito e tríceps', type: 'strength', variant: null, weekdays: [1, 4], group_ids: ['g-tcc'], position: 0,
+        duration_min: null, distance_km: null,
+        exercises: [
+          { exerciseId: 'bench_press_barbell', sets: [{ loadKg: 30, reps: 10 }, { loadKg: 32.5, reps: 8 }, { loadKg: 32.5, reps: 8 }] },
+          { exerciseId: 'incline_bench_dumbbell', sets: [{ loadKg: 12, reps: 10 }, { loadKg: 12, reps: 10 }] },
+          { exerciseId: 'triceps_pushdown', sets: [{ loadKg: 20, reps: 12 }, { loadKg: 20, reps: 12 }] },
+        ],
+      },
+      {
+        id: 't-b', name: 'Treino B — Pernas', type: 'strength', variant: null, weekdays: [2, 5], group_ids: ['g-tcc'], position: 1,
+        duration_min: null, distance_km: null,
+        exercises: [
+          { exerciseId: 'back_squat', sets: [{ loadKg: 40, reps: 10 }, { loadKg: 45, reps: 8 }] },
+          { exerciseId: 'leg_press_45', sets: [{ loadKg: 100, reps: 12 }, { loadKg: 110, reps: 10 }] },
+        ],
+      },
+      {
+        id: 't-c', name: 'Rodagem de sábado', type: 'run', variant: null, weekdays: [6], group_ids: ['g-tcc', 'g-paulista'], position: 2,
+        duration_min: 35, distance_km: 6, exercises: [],
+      },
+    ] as WorkoutTemplate[],
     completed: new Map<string, string>(),
     listeners: new Set<(s: Session | null) => void>(),
   };
@@ -317,6 +341,8 @@ function scoreFor(userId: string, activity: Parameters<typeof extractMetrics>[0]
         performed_at: at.toISOString(),
         duration_min: activity.durationMin ?? (type === 'strength' ? 50 + Math.floor(rand() * 30) : null),
         distance_km: activity.distanceKm ?? null,
+        variant: activity.variant ?? null,
+        elevation_m: null,
         photo_path: null,
         photo_url: null,
         emoji: '✌️',
@@ -558,6 +584,8 @@ export const demoApi: Api = {
       type: p.type,
       durationMin: p.durationMin,
       distanceKm: p.distanceKm,
+      variant: p.variant,
+      elevationM: p.elevationM,
       exercises: p.exercises?.map((e) => ({
         exerciseId: e.exerciseId,
         muscleGroup: EXERCISES.find((x) => x.id === e.exerciseId)?.muscle_group ?? 'core',
@@ -578,6 +606,8 @@ export const demoApi: Api = {
         performed_at: at.toISOString(),
         duration_min: p.durationMin ?? null,
         distance_km: p.distanceKm ?? null,
+        variant: p.variant ?? null,
+        elevation_m: p.elevationM ?? null,
         photo_path: p.photoPath ?? null,
         photo_url: p.photoPath?.split('#')[1] ?? null,
         emoji: p.emoji ?? null,
@@ -615,6 +645,27 @@ export const demoApi: Api = {
   async listMyCheckins(limit = 30) {
     await wait();
     return state.checkins.filter((c) => c.user_id === ME).slice(0, limit);
+  },
+
+  async listTemplates() {
+    await wait(100);
+    return [...state.templates].sort((a, b) => a.position - b.position);
+  },
+  async saveTemplate({ id, ...input }) {
+    await wait();
+    const existing = id ? state.templates.find((t) => t.id === id) : undefined;
+    if (existing) {
+      Object.assign(existing, input);
+      return existing;
+    }
+    if (state.templates.length >= 20) throw new Error('Limite de 20 treinos fixos');
+    const t: WorkoutTemplate = { ...input, id: `t-${Math.random().toString(36).slice(2, 8)}`, position: state.templates.length };
+    state.templates.push(t);
+    return t;
+  },
+  async deleteTemplate(id) {
+    await wait();
+    state.templates = state.templates.filter((t) => t.id !== id);
   },
 
   async listCosmetics() {

@@ -1,5 +1,5 @@
 /**
- * Espelho dos catálogos da migration 20261030000004_catalog.sql, usado pelo modo demo
+ * Espelho dos catálogos da migration 20261030023501_catalog.sql, usado pelo modo demo
  * e para rótulos no app. A fonte da verdade em produção é o banco.
  */
 import type { Cosmetic, Exercise } from './types';

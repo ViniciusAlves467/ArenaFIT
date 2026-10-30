@@ -30,6 +30,7 @@ O motor de pontuação vive em `supabase/functions/_shared/scoring/` e é **o me
 
 - O cliente **nunca envia pontos/XP**: envia apenas o treino bruto. A Edge Function `submit-checkin` valida, calcula com o motor e grava tudo numa única transação (`record_checkin`, executável só pelo `service_role`).
 - Colunas de pontos, XP, moedas, nível e streak não têm permissão de `UPDATE` para o usuário (privilégios por coluna). Compras passam pela RPC `purchase_cosmetic`, que valida saldo e nível.
+- Funções auxiliares das políticas ficam no schema `private` (não expostas via `/rpc`).
 - RLS em todas as tabelas: grupos privados só são visíveis a membros; dados corporais (`profile_private`) só ao dono; amostras estatísticas e referências só ao servidor.
 - Votos: só membros do grupo, nunca no próprio check-in, até 48 h. Um trigger recalcula o status; se reprovado, os pontos saem do ranking e as amostras deixam de alimentar os percentis.
 - Um treino pontuado por dia em cada grupo (evita "farm" de check-ins); check-in retroativo só até 36 h.
@@ -44,13 +45,13 @@ O motor de pontuação vive em `supabase/functions/_shared/scoring/` e é **o me
 
 ## Testes realizados
 
-- `npm test` — 43 testes (motor de pontuação + validação do check-in).
-- Migrations aplicadas e exercitadas num Postgres 16 com stubs de `auth`/`storage`: cadastro, grupo, check-in, regra de 1 ponto/dia, reprovação e reaprovação por voto, loja, exportação e tentativas de fraude (todas bloqueadas pela RLS).
+- `npm test` — 55 testes (motor de pontuação, ciclismo/natação, regra "prefiro não informar" e validação do check-in). `npm run lint` e `npm run typecheck` limpos.
+- Migrations aplicadas no projeto Supabase ArenaFIT e, antes, exercitadas num Postgres 16 com stubs de `auth`/`storage`: cadastro, grupo, check-in, regra de 1 ponto/dia, reprovação e reaprovação por voto, loja, exportação e tentativas de fraude (todas bloqueadas pela RLS).
 - Edge Functions checadas com `deno check`; bundle Android exportado com sucesso; telas verificadas na web.
 
 ## Pendências técnicas para produção
 
-- Testar as Edge Functions contra um projeto Supabase real (`supabase functions serve`).
+- Testar as Edge Functions de ponta a ponta pelo app conectado ao projeto (já publicadas).
 - Política de Privacidade e Termos de Uso (texto jurídico) — hoje só referenciados.
 - Notificações push (lembrete de treino, voto pendente) com `expo-notifications`.
 - Compressão/redimensionamento da foto antes do upload (`expo-image-manipulator`).
