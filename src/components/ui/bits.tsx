@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Switch, View, type ViewStyle } from 'react-native';
 
 import { colors, radius, space } from '@/theme/tokens';
 
@@ -37,6 +37,21 @@ export function Chip({
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+/** Switch com as cores do app (no web, `activeThumbColor` substitui `thumbColor`). */
+export function Toggle({ value, onValueChange, disabled }: { value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean }) {
+  const webProps = { activeThumbColor: '#fff', activeTrackColor: colors.primary } as object;
+  return (
+    <Switch
+      value={value}
+      onValueChange={onValueChange}
+      disabled={disabled}
+      trackColor={{ true: colors.primary, false: colors.surface3 }}
+      thumbColor="#fff"
+      {...webProps}
+    />
   );
 }
 

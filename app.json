@@ -61,6 +61,13 @@
         {
           "locationWhenInUsePermission": "O ArenaFit registra sua localização no momento do check-in para validar o treino nos grupos."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#FF6A13",
+          "defaultChannel": "reminders"
+        }
       ]
     ],
     "experiments": {

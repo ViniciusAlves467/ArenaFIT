@@ -18,22 +18,25 @@ import {
 import { localDay } from '@/theme/format';
 
 import { ACHIEVEMENTS, COSMETICS, EXERCISES, MUSCLE_LABEL } from './catalog';
-import type {
-  AchievementProgress,
-  Api,
-  Checkin,
-  CheckinResult,
-  CheckinSet,
-  FeedItem,
-  Group,
-  PrivateProfile,
-  Profile,
-  PublicProfile,
-  Session,
-  WorkoutTemplate,
+import {
+  type AchievementProgress,
+  type Api,
+  AuthFlowError,
+  type Checkin,
+  type CheckinResult,
+  type CheckinSet,
+  type FeedItem,
+  type Group,
+  type PrivateProfile,
+  type Profile,
+  type PublicProfile,
+  type Session,
+  type WorkoutTemplate,
 } from './types';
 
 const ME = 'demo-me';
+/** Código de verificação aceito no modo demo (e-mail e recuperação de senha). */
+export const DEMO_CODE = '123456';
 const wait = (ms = 180) => new Promise((r) => setTimeout(r, ms));
 const DAY = 86_400_000;
 const daysAgo = (d: number, h = 18) => {
@@ -185,6 +188,7 @@ function createState() {
 
   return {
     session: null as Session | null,
+    pendingEmail: null as string | null,
     me,
     priv,
     groups,
@@ -415,23 +419,47 @@ export const demoApi: Api = {
     },
     async signInWithPassword(email) {
       await wait(400);
+      if (state.pendingEmail === email) throw new AuthFlowError('Confirme seu e-mail para entrar', 'email_not_confirmed');
       state.session = { userId: ME, email };
       emitAuth();
     },
+    // No demo o cadastro também passa pela verificação; o código é sempre DEMO_CODE.
     async signUp(email, _password, fullName) {
       await wait(400);
       state.priv.full_name = fullName;
       state.me.display_name = fullName.split(' ')[0];
       state.me.username = null;
       state.me.onboarded_at = null;
-      state.session = { userId: ME, email };
-      emitAuth();
-      return { needsConfirmation: false };
+      state.pendingEmail = email;
+      return { needsConfirmation: true };
     },
     async signInWithGoogle() {
       await demoApi.auth.signInWithPassword('demo@arenafit.app', '');
     },
     async exchangeCode() {},
+    async verifyTokenHash() {},
+    async verifyEmail(email, code) {
+      await wait(400);
+      if (code !== DEMO_CODE) throw new AuthFlowError('Código inválido ou expirado. Peça um novo.', 'otp_invalid');
+      state.pendingEmail = null;
+      state.session = { userId: ME, email };
+      emitAuth();
+    },
+    async resendVerification() {
+      await wait(300);
+    },
+    async requestPasswordReset() {
+      await wait(300);
+    },
+    async resetPassword(email, code) {
+      await wait(400);
+      if (code !== DEMO_CODE) throw new AuthFlowError('Código inválido ou expirado. Peça um novo.', 'otp_invalid');
+      state.session = { userId: ME, email };
+      emitAuth();
+    },
+    async updatePassword() {
+      await wait(300);
+    },
     async signOut() {
       state.session = null;
       emitAuth();
@@ -440,7 +468,7 @@ export const demoApi: Api = {
 
   async getMe() {
     await wait(120);
-    return { email: state.session?.email ?? null, profile: { ...state.me }, private: { ...state.priv } };
+    return { email: state.session?.email ?? null, providers: ['email'], profile: { ...state.me }, private: { ...state.priv } };
   },
   async updateProfile(patch) {
     await wait();
@@ -525,6 +553,34 @@ export const demoApi: Api = {
     const m = state.members.find((x) => x.group_id === groupId && x.user_id === ME);
     if (m?.role === 'owner') throw new Error('O dono não pode sair do grupo');
     state.members = state.members.filter((x) => x !== m);
+    if (state.me.favorite_group_id === groupId) state.me.favorite_group_id = null;
+  },
+  async updateGroup(groupId, patch) {
+    await wait();
+    const g = state.groups.find((x) => x.id === groupId);
+    if (!g || g.owner_id !== ME) throw new Error('Só o dono pode editar o grupo');
+    Object.assign(g, patch);
+  },
+  async removeMember(groupId, userId) {
+    await wait();
+    const g = state.groups.find((x) => x.id === groupId);
+    if (!g || g.owner_id !== ME || userId === ME) throw new Error('Não é possível remover este membro');
+    state.members = state.members.filter((m) => !(m.group_id === groupId && m.user_id === userId));
+  },
+  async regenerateInviteCode(groupId) {
+    await wait();
+    const g = state.groups.find((x) => x.id === groupId);
+    if (!g || g.owner_id !== ME) throw new Error('Só o dono pode gerar um novo código');
+    g.invite_code = Math.random().toString(36).slice(2, 8).toUpperCase().padEnd(6, 'X');
+    return g.invite_code;
+  },
+  async deleteGroup(groupId) {
+    await wait();
+    const g = state.groups.find((x) => x.id === groupId);
+    if (!g || g.owner_id !== ME) throw new Error('Só o dono pode excluir o grupo');
+    state.groups = state.groups.filter((x) => x.id !== groupId);
+    state.members = state.members.filter((m) => m.group_id !== groupId);
+    state.checkinGroups = state.checkinGroups.filter((cg) => cg.group_id !== groupId);
     if (state.me.favorite_group_id === groupId) state.me.favorite_group_id = null;
   },
   async vote(checkinId, groupId, vote) {

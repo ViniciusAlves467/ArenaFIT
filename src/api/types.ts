@@ -43,10 +43,13 @@ export interface PrivateProfile {
   height_cm: number | null;
   weight_kg: number | null;
   terms_accepted_at: string | null;
+  privacy_version?: string | null;
 }
 
 export interface Me {
   email: string | null;
+  /** Provedores vinculados à conta (ex.: ['email'], ['google']). */
+  providers: string[];
   profile: Profile;
   private: PrivateProfile;
 }
@@ -214,6 +217,31 @@ export interface WorkoutTemplate {
 
 export type WorkoutTemplateInput = Omit<WorkoutTemplate, 'id' | 'position'> & { id?: string };
 
+/** Erro de autenticação com código estável, para a UI decidir o próximo passo. */
+export type AuthErrorCode =
+  | 'email_not_confirmed'
+  | 'invalid_credentials'
+  | 'otp_invalid'
+  | 'rate_limited'
+  | 'user_exists'
+  | 'weak_password'
+  | 'cancelled'
+  | 'unknown';
+
+export class AuthFlowError extends Error {
+  constructor(
+    message: string,
+    public readonly code: AuthErrorCode = 'unknown',
+  ) {
+    super(message);
+    this.name = 'AuthFlowError';
+  }
+}
+
+export type GroupPatch = Partial<
+  Pick<Group, 'name' | 'description' | 'visibility' | 'ends_on' | 'accent' | 'require_photo' | 'require_location'>
+>;
+
 export interface Session {
   userId: string;
   email: string | null;
@@ -227,7 +255,17 @@ export interface Api {
     signInWithPassword(email: string, password: string): Promise<void>;
     signUp(email: string, password: string, fullName: string): Promise<{ needsConfirmation: boolean }>;
     signInWithGoogle(): Promise<void>;
+    /** Troca o `code` PKCE do deep link (Google ou link do e-mail) por uma sessão. */
     exchangeCode(code: string): Promise<void>;
+    /** Link de e-mail no formato `token_hash` (templates personalizados). */
+    verifyTokenHash(tokenHash: string, type: 'signup' | 'email' | 'recovery' | 'email_change'): Promise<void>;
+    /** Confirma o cadastro com o código de 6 dígitos enviado por e-mail. */
+    verifyEmail(email: string, code: string): Promise<void>;
+    resendVerification(email: string): Promise<void>;
+    requestPasswordReset(email: string): Promise<void>;
+    /** Valida o código de recuperação e já define a nova senha. */
+    resetPassword(email: string, code: string, newPassword: string): Promise<void>;
+    updatePassword(newPassword: string): Promise<void>;
     signOut(): Promise<void>;
   };
   getMe(): Promise<Me>;
@@ -242,6 +280,10 @@ export interface Api {
   createGroup(input: NewGroupInput): Promise<Group>;
   joinGroup(by: { id?: string; code?: string }): Promise<Group>;
   leaveGroup(groupId: string): Promise<void>;
+  updateGroup(groupId: string, patch: GroupPatch): Promise<void>;
+  removeMember(groupId: string, userId: string): Promise<void>;
+  regenerateInviteCode(groupId: string): Promise<string>;
+  deleteGroup(groupId: string): Promise<void>;
   vote(checkinId: string, groupId: string, vote: 'approve' | 'reject' | null): Promise<void>;
 
   getDailyEmoji(): Promise<string>;

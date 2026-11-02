@@ -69,7 +69,14 @@ export default function GroupDetail() {
       onRefresh={() => Promise.all([ranking.refetch(), feed.refetch()])}
       refreshing={ranking.isRefetching || feed.isRefetching}
     >
-      <TopBar right={<IconButton icon="share" label="Convidar" onPress={share} />} />
+      <TopBar
+        right={
+          <View style={{ flexDirection: 'row', gap: space.sm }}>
+            {isOwner && <IconButton icon="settings" label="Configurar grupo" onPress={() => router.push({ pathname: '/group/manage', params: { id: g.id } })} />}
+            <IconButton icon="share" label="Convidar" onPress={share} />
+          </View>
+        }
+      />
 
       <Card style={{ gap: space.md }}>
         <View style={[styles.accentBar, { backgroundColor: g.accent }]} />

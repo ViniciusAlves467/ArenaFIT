@@ -3,13 +3,14 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { api, type GroupSummary, type WorkoutTemplate } from '@/api';
 import { ActivityForm, type ActivityDraft, draftExercises, draftFromTemplate, draftIsValid, emptyDraft, isCardio, num } from '@/components/ActivityForm';
-import { Button, Card, Chip, Icon, IconButton, Input, Screen, SectionTitle, Text } from '@/components/ui';
+import { Button, Card, Chip, Icon, IconButton, Input, Screen, SectionTitle, Text, Toggle } from '@/components/ui';
 import { useDailyEmoji, useExercises, useMyGroups, useSaveTemplate, useSubmitCheckin, useTemplates } from '@/hooks/queries';
 import { setLastCheckinResult } from '@/lib/checkin-result';
+import { compressPhoto } from '@/lib/photo';
 import { useToast } from '@/providers/ToastProvider';
 import { colors, radius, space } from '@/theme/tokens';
 
@@ -38,7 +39,7 @@ function CheckinForm({ groups, templates, initialTemplate }: { groups: GroupSumm
   const saveTemplate = useSaveTemplate();
 
   const [draft, setDraft] = useState<ActivityDraft>(() => (initialTemplate ? draftFromTemplate(initialTemplate) : emptyDraft()));
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<{ uri: string; width: number; height: number } | null>(null);
   const [title, setTitle] = useState(initialTemplate?.name ?? '');
   const [groupIds, setGroupIds] = useState<string[]>(() => groupsFor(initialTemplate, groups));
   const [templateId, setTemplateId] = useState<string | null>(initialTemplate?.id ?? null);
@@ -67,7 +68,7 @@ function CheckinForm({ groups, templates, initialTemplate }: { groups: GroupSumm
       }
     }
     const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.6, exif: false });
-    if (!res.canceled && res.assets[0]) setPhoto(res.assets[0].uri);
+    if (!res.canceled && res.assets[0]) setPhoto({ uri: res.assets[0].uri, width: res.assets[0].width, height: res.assets[0].height });
   }
 
   async function getLocation() {
@@ -82,7 +83,7 @@ function CheckinForm({ groups, templates, initialTemplate }: { groups: GroupSumm
     try {
       const cardio = isCardio(draft);
       const location = needsLocation.length ? await getLocation() : undefined;
-      const photoPath = photo ? await api.uploadCheckinPhoto(photo) : undefined;
+      const photoPath = photo ? await api.uploadCheckinPhoto(await compressPhoto(photo.uri, photo.width, photo.height)) : undefined;
       const result = await submit.mutateAsync({
         type: draft.type,
         variant: draft.variant ?? undefined,
@@ -155,7 +156,7 @@ function CheckinForm({ groups, templates, initialTemplate }: { groups: GroupSumm
       <Pressable accessibilityRole="button" accessibilityLabel="Tirar foto" onPress={takePhoto} style={[styles.photo, !photo && needsPhoto.length > 0 && { borderColor: colors.primaryBorder }]}>
         {photo ? (
           <>
-            <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            <Image source={{ uri: photo.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
             <View style={styles.retake}>
               <Icon name="camera" size={14} color={colors.text} />
               <Text variant="caption">Refazer</Text>
@@ -221,7 +222,7 @@ function CheckinForm({ groups, templates, initialTemplate }: { groups: GroupSumm
                 Exercícios, cargas e grupos ficam prontos para a próxima vez.
               </Text>
             </View>
-            <Switch value={saveAsTemplate} onValueChange={setSaveAsTemplate} trackColor={{ true: colors.primary, false: colors.surface3 }} thumbColor="#fff" />
+            <Toggle value={saveAsTemplate} onValueChange={setSaveAsTemplate} />
           </View>
         </Card>
       )}

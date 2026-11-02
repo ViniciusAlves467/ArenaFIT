@@ -29,10 +29,7 @@ EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Project Settings → API Keys → Publisha
 
 Sem esse arquivo o app volta ao modo demo.
 
-**Falta configurar no painel (não dá para fazer por API):**
-
-- Authentication → URL Configuration: *Site URL* `arenafit://` e, em *Redirect URLs*, `arenafit://auth-callback`, `exp://**` e `http://localhost:8081/**`.
-- Authentication → Providers → Google: Client ID e Secret do Google Cloud (tela de consentimento OAuth + credencial "Aplicativo da Web", com a callback `https://xainescjcawmvarsjumc.supabase.co/auth/v1/callback`).
+**Autenticação (e-mail com código, recuperação de senha e Google):** siga [`docs/AUTH.md`](docs/AUTH.md). Em resumo, no painel do Supabase: URLs de retorno, SMTP próprio (o SMTP padrão só entrega para membros da organização), templates em português de `supabase/templates/` e as credenciais do Google — ou tudo de uma vez com `npx supabase config push`.
 
 ## Publicando mudanças no Supabase
 
@@ -72,11 +69,12 @@ Desenvolvimento local completo (Docker): `npx supabase start` sobe Postgres/Auth
 ```
 src/
   app/                 Telas (Expo Router: cada arquivo é uma rota)
-    (auth)/            Boas-vindas, login, cadastro
+    (auth)/            Boas-vindas, login, cadastro, verificação de e-mail, recuperação de senha
     onboarding/        Dados corporais + consentimento LGPD, avatar
     (tabs)/            Início, Grupos, Desafios, Perfil
     routines/          Treinos fixos (lista e editor)
-    group/  checkin/   Grupo (ranking + feed de validação), novo check-in, resultado
+    group/  checkin/   Grupo (ranking, feed de validação, configurações do dono), check-in, resultado
+    legal/             Termos de Uso e Política de Privacidade
     shop, settings, scoring
   api/                 Contrato da API + implementação Supabase e demo
   components/          Design system (ui/) e componentes de domínio
@@ -92,4 +90,4 @@ scripts/               Simulação do modelo de pontuação
 docs/                  Arquitetura, pontuação e sugestões
 ```
 
-Leia também: [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md) · [`docs/PONTUACAO.md`](docs/PONTUACAO.md) · [`docs/SUGESTOES.md`](docs/SUGESTOES.md)
+Leia também: [`docs/AUTH.md`](docs/AUTH.md) · [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md) · [`docs/PONTUACAO.md`](docs/PONTUACAO.md) · [`docs/SUGESTOES.md`](docs/SUGESTOES.md)

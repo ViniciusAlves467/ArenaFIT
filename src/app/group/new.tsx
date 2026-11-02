@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Switch, View } from 'react-native';
+import { View } from 'react-native';
 
-import { Button, Card, Chip, Input, ListRow, Screen, Text, TopBar } from '@/components/ui';
+import { Button, Card, Chip, Input, ListRow, Screen, Text, Toggle, TopBar } from '@/components/ui';
 import { useCreateGroup } from '@/hooks/queries';
 import { useToast } from '@/providers/ToastProvider';
 import { localDay } from '@/theme/format';
-import { colors, space } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
 
 const DURATIONS = [
   { label: '7 dias', days: 7 },
@@ -44,7 +44,7 @@ export default function NewGroup() {
   }
 
   const toggle = (value: boolean, onChange: (v: boolean) => void) => (
-    <Switch value={value} onValueChange={onChange} trackColor={{ true: colors.primary, false: colors.surface3 }} thumbColor="#fff" />
+    <Toggle value={value} onValueChange={onChange} />
   );
 
   return (

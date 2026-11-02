@@ -1,11 +1,14 @@
 import { router } from 'expo-router';
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { isDemo } from '@/api';
 import { Avatar, UserTitle } from '@/components/Avatar';
 import { CheckinRow, GroupTile, LevelBar, WeekStrip } from '@/components/home';
+import { useReminderContext } from '@/components/ReminderCard';
 import { Badge, Button, Card, Divider, EmptyState, Icon, Screen, SectionTitle, StatPill, Text } from '@/components/ui';
 import { useDailyEmoji, useMe, useMyCheckins, useMyGroups, useRanking, useTemplates } from '@/hooks/queries';
+import { syncReminders } from '@/lib/reminders';
 import { templateSummary, templatesForToday } from '@/lib/routines';
 import { formatNumber, greeting, localDay } from '@/theme/format';
 import { colors, space } from '@/theme/tokens';
@@ -65,6 +68,12 @@ export default function Home() {
   const checkins = useMyCheckins();
   const emoji = useDailyEmoji();
   const templates = useTemplates();
+  const reminder = useReminderContext();
+
+  // Refaz a agenda de lembretes quando o status do dia muda (ex.: depois de um check-in).
+  useEffect(() => {
+    if (reminder.ready) syncReminders({ doneToday: reminder.doneToday, streak: reminder.streak }).catch(() => {});
+  }, [reminder.ready, reminder.doneToday, reminder.streak]);
 
   if (!me.data) return <Screen>{null}</Screen>;
   const { profile } = me.data;

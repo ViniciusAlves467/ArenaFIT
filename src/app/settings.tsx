@@ -3,8 +3,10 @@ import { useState } from 'react';
 import { Share, View } from 'react-native';
 
 import { api, isDemo, type Me, type Sex } from '@/api';
+import { ReminderCard } from '@/components/ReminderCard';
 import { Button, Card, Chip, Divider, Input, ListRow, Screen, SectionTitle, Text, TopBar } from '@/components/ui';
 import { useMe, useUpdateProfile } from '@/hooks/queries';
+import { passwordIssue } from '@/lib/password';
 import { useToast } from '@/providers/ToastProvider';
 import { space } from '@/theme/tokens';
 
@@ -20,8 +22,40 @@ function SettingsForm({ me }: { me: Me }) {
   const [height, setHeight] = useState(String(me.private.height_cm ?? ''));
   const [weight, setWeight] = useState(String(me.private.weight_kg ?? ''));
   const [sex, setSex] = useState<Sex | null>(me.private.sex);
+  const [displayName, setDisplayName] = useState(me.profile.display_name ?? '');
+  const [username, setUsername] = useState(me.profile.username ?? '');
+  const [password, setPassword] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+  const hasPassword = me.providers.includes('email');
+  const pwIssue = password ? passwordIssue(password) : null;
+
+  async function saveProfile() {
+    if (!/^[a-z0-9_.]{3,20}$/.test(username)) {
+      toast('Nome de usuário: 3 a 20 letras minúsculas, números, ponto ou _', 'error');
+      return;
+    }
+    try {
+      await update.mutateAsync({ profile: { display_name: displayName.trim(), username } });
+      toast('Perfil atualizado', 'success');
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  }
+
+  async function savePassword() {
+    setSavingPassword(true);
+    try {
+      await api.auth.updatePassword(password);
+      setPassword('');
+      toast(hasPassword ? 'Senha alterada' : 'Senha criada: agora você também pode entrar com e-mail', 'success');
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setSavingPassword(false);
+    }
+  }
 
   async function saveBody() {
     const h = Number(height.replace(',', '.'));
@@ -67,6 +101,19 @@ function SettingsForm({ me }: { me: Me }) {
     <Screen>
       <TopBar title="Configurações" />
 
+      <SectionTitle title="Perfil" />
+      <Card style={{ gap: space.md }}>
+        <Input label="Nome de exibição" value={displayName} onChangeText={setDisplayName} maxLength={40} />
+        <Input
+          label="Nome de usuário"
+          value={username}
+          onChangeText={(v) => setUsername(v.toLowerCase().replace(/[^a-z0-9_.]/g, '').slice(0, 20))}
+          autoCapitalize="none"
+          hint="Aparece como @usuário nos rankings."
+        />
+        <Button title="Salvar perfil" size="md" variant="secondary" onPress={saveProfile} loading={update.isPending} disabled={!displayName.trim()} />
+      </Card>
+
       <SectionTitle title="Dados corporais" />
       <Card style={{ gap: space.md }}>
         <Text variant="caption" tone="secondary">
@@ -88,6 +135,9 @@ function SettingsForm({ me }: { me: Me }) {
         <Button title="Salvar" size="md" variant="secondary" onPress={saveBody} loading={update.isPending} />
       </Card>
 
+      <SectionTitle title="Lembretes" />
+      <ReminderCard />
+
       <SectionTitle title="Pontuação" />
       <Card padded={false}>
         <ListRow icon="info" title="Como funciona a pontuação" subtitle="Base, bônus, comparação e histórico" onPress={() => router.push('/scoring')} />
@@ -95,6 +145,10 @@ function SettingsForm({ me }: { me: Me }) {
 
       <SectionTitle title="Privacidade (LGPD)" />
       <Card padded={false}>
+        <ListRow icon="shield-check" title="Política de Privacidade" onPress={() => router.push('/legal/privacy')} />
+        <Divider />
+        <ListRow icon="info" title="Termos de Uso" onPress={() => router.push('/legal/terms')} />
+        <Divider />
         <ListRow icon="download" title="Exportar meus dados" subtitle="Cópia completa em JSON (portabilidade)" onPress={exportData} />
         <Divider />
         <ListRow
@@ -108,7 +162,30 @@ function SettingsForm({ me }: { me: Me }) {
 
       <SectionTitle title="Conta" />
       <Card padded={false}>
-        <ListRow icon="mail" title={me.email ?? '—'} subtitle={isDemo ? 'Modo demo · dados locais' : 'Conectado ao Supabase'} />
+        <ListRow
+          icon="mail"
+          title={me.email ?? '—'}
+          subtitle={isDemo ? 'Modo demo · dados locais' : me.providers.includes('google') ? 'Conta Google' : 'E-mail e senha'}
+        />
+        <Divider />
+        <View style={{ padding: space.lg, gap: space.md }}>
+          <Input
+            label={hasPassword ? 'Nova senha' : 'Criar senha (para entrar também por e-mail)'}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoComplete="new-password"
+            error={pwIssue}
+          />
+          <Button
+            title={hasPassword ? 'Alterar senha' : 'Criar senha'}
+            size="md"
+            variant="secondary"
+            onPress={savePassword}
+            loading={savingPassword}
+            disabled={!password || !!pwIssue}
+          />
+        </View>
         <Divider />
         <ListRow icon="logout" title="Sair" onPress={() => api.auth.signOut()} />
       </Card>

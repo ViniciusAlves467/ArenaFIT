@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { Me, Sex } from '@/api';
 import { StepHeader } from '@/components/StepHeader';
+import { PRIVACY_VERSION } from '@/content/legal';
 import { Button, Card, Chip, Icon, Input, Screen, Text } from '@/components/ui';
 import { useMe, useUpdateProfile } from '@/hooks/queries';
 import { useToast } from '@/providers/ToastProvider';
@@ -68,7 +69,7 @@ function ProfileForm({ me }: { me: Me }) {
   async function next() {
     try {
       await update.mutateAsync({
-        priv: { birth_date: birthIso, sex, height_cm: h, weight_kg: w, terms_accepted_at: new Date().toISOString() },
+        priv: { birth_date: birthIso, sex, height_cm: h, weight_kg: w, terms_accepted_at: new Date().toISOString(), privacy_version: PRIVACY_VERSION },
         profile: { display_name: displayName.trim(), username },
       });
       router.push('/onboarding/avatar');
@@ -129,7 +130,11 @@ function ProfileForm({ me }: { me: Me }) {
         <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: consent }} onPress={() => setConsent((c) => !c)} style={styles.consent}>
           <View style={[styles.box, consent && styles.boxOn]}>{consent && <Icon name="check" size={14} color={colors.onPrimary} strokeWidth={3} />}</View>
           <Text variant="caption" style={{ flex: 1 }}>
-            Li e concordo com a Política de Privacidade e autorizo o tratamento destes dados para o cálculo da pontuação (LGPD, art. 7º, I).
+            Autorizo o uso dos meus dados corporais e de treino para o cálculo da pontuação, conforme a{' '}
+            <Text variant="caption" tone="primary" onPress={() => router.push('/legal/privacy')}>
+              Política de Privacidade
+            </Text>{' '}
+            (consentimento específico, LGPD art. 11, I).
           </Text>
         </Pressable>
       </View>
