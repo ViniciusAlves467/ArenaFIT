@@ -21,7 +21,6 @@ import { ACHIEVEMENTS, COSMETICS, EXERCISES, MUSCLE_LABEL } from './catalog';
 import {
   type AchievementProgress,
   type Api,
-  AuthFlowError,
   type Checkin,
   type CheckinResult,
   type CheckinSet,
@@ -35,8 +34,6 @@ import {
 } from './types';
 
 const ME = 'demo-me';
-/** Código de verificação aceito no modo demo (e-mail e recuperação de senha). */
-export const DEMO_CODE = '123456';
 const wait = (ms = 180) => new Promise((r) => setTimeout(r, ms));
 const DAY = 86_400_000;
 const daysAgo = (d: number, h = 18) => {
@@ -188,7 +185,6 @@ function createState() {
 
   return {
     session: null as Session | null,
-    pendingEmail: null as string | null,
     me,
     priv,
     groups,
@@ -417,49 +413,13 @@ export const demoApi: Api = {
       state.listeners.add(cb);
       return () => state.listeners.delete(cb);
     },
-    async signInWithPassword(email) {
-      await wait(400);
-      if (state.pendingEmail === email) throw new AuthFlowError('Confirme seu e-mail para entrar', 'email_not_confirmed');
-      state.session = { userId: ME, email };
-      emitAuth();
-    },
-    // No demo o cadastro também passa pela verificação; o código é sempre DEMO_CODE.
-    async signUp(email, _password, fullName) {
-      await wait(400);
-      state.priv.full_name = fullName;
-      state.me.display_name = fullName.split(' ')[0];
-      state.me.username = null;
-      state.me.onboarded_at = null;
-      state.pendingEmail = email;
-      return { needsConfirmation: true };
-    },
+    // No demo o "Google" entra direto na conta de exemplo, já com grupos e histórico.
     async signInWithGoogle() {
-      await demoApi.auth.signInWithPassword('demo@arenafit.app', '');
+      await wait(400);
+      state.session = { userId: ME, email: 'demo@arenafit.app' };
+      emitAuth();
     },
     async exchangeCode() {},
-    async verifyTokenHash() {},
-    async verifyEmail(email, code) {
-      await wait(400);
-      if (code !== DEMO_CODE) throw new AuthFlowError('Código inválido ou expirado. Peça um novo.', 'otp_invalid');
-      state.pendingEmail = null;
-      state.session = { userId: ME, email };
-      emitAuth();
-    },
-    async resendVerification() {
-      await wait(300);
-    },
-    async requestPasswordReset() {
-      await wait(300);
-    },
-    async resetPassword(email, code) {
-      await wait(400);
-      if (code !== DEMO_CODE) throw new AuthFlowError('Código inválido ou expirado. Peça um novo.', 'otp_invalid');
-      state.session = { userId: ME, email };
-      emitAuth();
-    },
-    async updatePassword() {
-      await wait(300);
-    },
     async signOut() {
       state.session = null;
       emitAuth();
@@ -468,7 +428,7 @@ export const demoApi: Api = {
 
   async getMe() {
     await wait(120);
-    return { email: state.session?.email ?? null, providers: ['email'], profile: { ...state.me }, private: { ...state.priv } };
+    return { email: state.session?.email ?? null, providers: ['google'], profile: { ...state.me }, private: { ...state.priv } };
   },
   async updateProfile(patch) {
     await wait();

@@ -6,7 +6,6 @@ import { api, isDemo, type Me, type Sex } from '@/api';
 import { ReminderCard } from '@/components/ReminderCard';
 import { Button, Card, Chip, Divider, Input, ListRow, Screen, SectionTitle, Text, TopBar } from '@/components/ui';
 import { useMe, useUpdateProfile } from '@/hooks/queries';
-import { passwordIssue } from '@/lib/password';
 import { useToast } from '@/providers/ToastProvider';
 import { space } from '@/theme/tokens';
 
@@ -24,12 +23,8 @@ function SettingsForm({ me }: { me: Me }) {
   const [sex, setSex] = useState<Sex | null>(me.private.sex);
   const [displayName, setDisplayName] = useState(me.profile.display_name ?? '');
   const [username, setUsername] = useState(me.profile.username ?? '');
-  const [password, setPassword] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [savingPassword, setSavingPassword] = useState(false);
-  const hasPassword = me.providers.includes('email');
-  const pwIssue = password ? passwordIssue(password) : null;
 
   async function saveProfile() {
     if (!/^[a-z0-9_.]{3,20}$/.test(username)) {
@@ -41,19 +36,6 @@ function SettingsForm({ me }: { me: Me }) {
       toast('Perfil atualizado', 'success');
     } catch (e) {
       toast((e as Error).message, 'error');
-    }
-  }
-
-  async function savePassword() {
-    setSavingPassword(true);
-    try {
-      await api.auth.updatePassword(password);
-      setPassword('');
-      toast(hasPassword ? 'Senha alterada' : 'Senha criada: agora você também pode entrar com e-mail', 'success');
-    } catch (e) {
-      toast((e as Error).message, 'error');
-    } finally {
-      setSavingPassword(false);
     }
   }
 
@@ -165,27 +147,8 @@ function SettingsForm({ me }: { me: Me }) {
         <ListRow
           icon="mail"
           title={me.email ?? '—'}
-          subtitle={isDemo ? 'Modo demo · dados locais' : me.providers.includes('google') ? 'Conta Google' : 'E-mail e senha'}
+          subtitle={isDemo ? 'Modo demo · dados locais' : 'Conta Google'}
         />
-        <Divider />
-        <View style={{ padding: space.lg, gap: space.md }}>
-          <Input
-            label={hasPassword ? 'Nova senha' : 'Criar senha (para entrar também por e-mail)'}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoComplete="new-password"
-            error={pwIssue}
-          />
-          <Button
-            title={hasPassword ? 'Alterar senha' : 'Criar senha'}
-            size="md"
-            variant="secondary"
-            onPress={savePassword}
-            loading={savingPassword}
-            disabled={!password || !!pwIssue}
-          />
-        </View>
         <Divider />
         <ListRow icon="logout" title="Sair" onPress={() => api.auth.signOut()} />
       </Card>

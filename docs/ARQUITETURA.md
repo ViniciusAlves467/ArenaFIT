@@ -5,7 +5,7 @@
 ```
  App (Expo / React Native)                         Supabase
  ┌────────────────────────────┐        ┌──────────────────────────────────────┐
- │ Telas (expo-router)        │        │ Auth (e-mail + Google, PKCE)         │
+ │ Telas (expo-router)        │        │ Auth (somente Google, PKCE)          │
  │ TanStack Query (cache)     │──────▶ │ Postgres + RLS                       │
  │ api/ (contrato único)      │  REST  │   tabelas, triggers, RPCs            │
  │   ├─ supabase-api.ts       │        │ Storage (bucket privado de fotos)    │

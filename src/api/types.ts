@@ -218,15 +218,7 @@ export interface WorkoutTemplate {
 export type WorkoutTemplateInput = Omit<WorkoutTemplate, 'id' | 'position'> & { id?: string };
 
 /** Erro de autenticação com código estável, para a UI decidir o próximo passo. */
-export type AuthErrorCode =
-  | 'email_not_confirmed'
-  | 'invalid_credentials'
-  | 'otp_invalid'
-  | 'rate_limited'
-  | 'user_exists'
-  | 'weak_password'
-  | 'cancelled'
-  | 'unknown';
+export type AuthErrorCode = 'rate_limited' | 'expired' | 'cancelled' | 'unknown';
 
 export class AuthFlowError extends Error {
   constructor(
@@ -252,20 +244,10 @@ export interface Api {
   auth: {
     getSession(): Promise<Session | null>;
     onChange(cb: (s: Session | null) => void): () => void;
-    signInWithPassword(email: string, password: string): Promise<void>;
-    signUp(email: string, password: string, fullName: string): Promise<{ needsConfirmation: boolean }>;
+    /** Único método de entrada: Google (OAuth do Supabase com PKCE). Cria a conta no primeiro acesso. */
     signInWithGoogle(): Promise<void>;
-    /** Troca o `code` PKCE do deep link (Google ou link do e-mail) por uma sessão. */
+    /** Troca o `code` PKCE do deep link de retorno do Google por uma sessão (usado na web). */
     exchangeCode(code: string): Promise<void>;
-    /** Link de e-mail no formato `token_hash` (templates personalizados). */
-    verifyTokenHash(tokenHash: string, type: 'signup' | 'email' | 'recovery' | 'email_change'): Promise<void>;
-    /** Confirma o cadastro com o código de 6 dígitos enviado por e-mail. */
-    verifyEmail(email: string, code: string): Promise<void>;
-    resendVerification(email: string): Promise<void>;
-    requestPasswordReset(email: string): Promise<void>;
-    /** Valida o código de recuperação e já define a nova senha. */
-    resetPassword(email: string, code: string, newPassword: string): Promise<void>;
-    updatePassword(newPassword: string): Promise<void>;
     signOut(): Promise<void>;
   };
   getMe(): Promise<Me>;

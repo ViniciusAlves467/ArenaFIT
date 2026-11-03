@@ -36,7 +36,7 @@ export const PRIVACY: LegalDoc = {
     {
       title: '2. Dados que coletamos',
       paragraphs: [
-        'Cadastro: nome, e-mail, senha (armazenada de forma criptografada pelo provedor de autenticação) ou identificação da conta Google, quando você escolhe entrar com ela.',
+        'Cadastro: o login é feito exclusivamente com a sua conta Google. Recebemos do Google apenas nome, e-mail, foto e um identificador da conta; o ArenaFit não cria nem armazena senha.',
         'Perfil: nome de exibição, nome de usuário, avatar e itens de personalização. Essas informações são visíveis para outros usuários.',
         'Dados corporais: data de nascimento, sexo (ou "prefiro não informar"), altura e peso. Eles nunca são exibidos a outras pessoas.',
         'Treinos: tipo de atividade, exercícios, cargas, repetições, duração, distância, título e a pontuação calculada.',
@@ -124,7 +124,7 @@ export const TERMS: LegalDoc = {
     {
       title: '3. Sua conta',
       paragraphs: [
-        'Você é responsável pelas informações que fornece e por manter sua senha em segurança. Uma pessoa, uma conta.',
+        'Você é responsável pelas informações que fornece e pela segurança da conta Google usada para entrar. Uma pessoa, uma conta.',
         'É necessário ter pelo menos 13 anos. Menores de 18 anos precisam do consentimento de um responsável.',
       ],
     },

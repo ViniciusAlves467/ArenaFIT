@@ -1,29 +1,47 @@
-# Autenticação — o que o app faz e o que configurar
+# Autenticação — login somente com Google
 
-## Fluxos implementados
+O ArenaFit entra **apenas com a conta Google**. Não há cadastro com e-mail e senha, então o projeto não envia nenhum e-mail: sem SMTP, sem domínio próprio e sem custo. O Google já garante que o e-mail é verdadeiro, e isso substitui a confirmação de e-mail.
 
-| Fluxo | Como funciona no app |
+## Como funciona no app
+
+| Etapa | O que acontece |
 | --- | --- |
-| Cadastro com e-mail | Nome, e-mail, senha (8+ caracteres, letras e números) e aceite dos Termos. O Supabase envia um e-mail com **código de 6 dígitos** e um botão. |
-| Verificação de e-mail | Tela "Confirme seu e-mail": digitar o código (funciona em qualquer aparelho) ou tocar no botão do e-mail no celular (abre `/auth-callback`). Reenvio com espera de 60 s. |
-| Login com conta não confirmada | O app reenvia o código e leva direto à tela de verificação. |
-| Esqueci minha senha | Envia um código; na tela seguinte o usuário digita o código e a nova senha. |
-| Login com Google | OAuth do Supabase com PKCE: navegador do sistema no celular (Expo Go e APK) e redirecionamento na web. |
-| Alterar/criar senha | Configurações → Conta. Quem entrou com Google pode criar uma senha para entrar também por e-mail. |
+| Boas-vindas | Um único botão, **Continuar com Google**. |
+| Primeiro acesso | O Supabase cria a conta com nome e e-mail vindos do Google (trigger `handle_new_user`). O app segue para o onboarding (dados corporais e consentimento LGPD, que registra `terms_accepted_at`). |
+| Próximos acessos | Entra direto. A sessão fica salva no aparelho e é renovada automaticamente. |
+| Sair / excluir conta | Configurações → Conta → Sair; e Privacidade → Excluir minha conta. |
 
-No **modo demo** todos os fluxos funcionam com o código `123456`.
+Por dentro, é o OAuth do Supabase com PKCE: no celular (Expo Go e APK) abre o navegador do sistema e volta ao app pelo deep link; na web, faz um redirecionamento completo para `/auth-callback`.
 
-## Caminho rápido: um comando configura tudo
+No **modo demo** (sem `.env.local`), o botão do Google entra direto na conta de exemplo.
 
-O script `scripts/configure-auth.mjs` aplica de uma vez as URLs de retorno, o SMTP, os templates em português, as regras de senha/código e o login com Google, usando a API oficial do Supabase. Ele mostra cada mudança antes de aplicar e confere o resultado no final. Você só precisa juntar três credenciais (passo a passo abaixo):
+## Custo
 
-| O que | Onde conseguir | Tempo |
-| --- | --- | --- |
-| Token de acesso do Supabase | supabase.com/dashboard/account/tokens → *Generate new token* | 1 min |
-| Chave SMTP | Resend (resend.com → API Keys) ou Brevo (app.brevo.com → SMTP & API) | 5 min |
-| Client ID e Secret do Google | Google Cloud Console (seção 4 abaixo) | 10 min |
+| Item | Custo |
+| --- | --- |
+| Login com Google (Google Cloud OAuth) | Gratuito |
+| Supabase Auth (plano Free) | Gratuito até 50.000 usuários ativos por mês |
+| E-mail/SMTP/domínio | Não usado |
 
-Na pasta do projeto, no seu computador:
+## Configuração (uma vez, uns 10 minutos)
+
+### 1. Credencial no Google Cloud
+
+No [Google Cloud Console](https://console.cloud.google.com):
+
+1. Crie um projeto (ex.: "ArenaFit"). Não precisa cadastrar cartão nem ativar faturamento.
+2. **APIs e serviços → Tela de permissão OAuth** (ou "Google Auth Platform"): tipo *Externo*, nome "ArenaFit", seu e-mail de suporte, escopos padrão (`email`, `profile`, `openid`).
+3. **Público-alvo:** enquanto o app estiver em *Teste*, só entram os e-mails listados em *Usuários de teste* (até 100). Adicione a equipe e a banca, ou clique em *Publicar app*: com apenas os escopos básicos, normalmente não é exigida verificação.
+4. **Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web**.
+5. Em *URIs de redirecionamento autorizados*, adicione exatamente:
+   `https://xainescjcawmvarsjumc.supabase.co/auth/v1/callback`
+6. Copie o **Client ID** (termina com `.apps.googleusercontent.com`) e o **Client Secret** (começa com `GOCSPX-`).
+
+Não é preciso credencial Android: o login passa pelo navegador do sistema e volta pelo deep link.
+
+### 2. Aplicar no Supabase
+
+Crie um token em [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens) e, na pasta do projeto:
 
 ```bash
 npm run configure:auth -- --dry-run
@@ -33,87 +51,29 @@ npm run configure:auth -- --dry-run
 npm run configure:auth
 ```
 
-O primeiro só mostra o que mudaria; o segundo pergunta as chaves (sem exibi-las na tela), mostra o resumo e pede confirmação. Pode rodar de novo quando quiser — por exemplo, depois de criar as credenciais do Google. Se pular o SMTP ou o Google, o resto é aplicado normalmente.
+O primeiro só mostra o que mudaria; o segundo pede o token, o Client ID e o Secret (o token e o Secret não aparecem na tela), mostra o resumo, pede confirmação e confere o resultado. Ele:
 
-As seções abaixo explicam cada item, caso prefira configurar pelo painel.
+- define as URLs de retorno (`arenafit://auth-callback`, `exp://**` para o Expo Go, `http://localhost:8081/**` para a web);
+- **desliga** o provedor de e-mail;
+- liga o Google com as suas credenciais.
 
-## 1. URLs de retorno (obrigatório)
+**Pelo painel, se preferir:** Supabase → Authentication → *URL Configuration* (as mesmas URLs acima); *Sign In / Providers* → Email: desativar; Google: ativar e colar Client ID e Secret.
 
-Supabase → **Authentication → URL Configuration**:
-
-- **Site URL:** `arenafit://auth-callback`
-- **Redirect URLs:** `arenafit://auth-callback`, `exp://**` (Expo Go) e `http://localhost:8081/**` (web local)
-
-## 2. SMTP próprio (obrigatório para usuários reais)
-
-O SMTP embutido do Supabase **só entrega e-mails para membros da organização** e tem limite de poucos envios por hora — serve para testar com o seu próprio e-mail, não com colegas ou na banca.
-
-Opções gratuitas:
-
-- **Resend** — 3.000 e-mails/mês (100/dia). Crie a conta, gere uma API key e, se tiver domínio, verifique-o (sem domínio dá para enviar só para o seu e-mail).
-- **Brevo** — 300 e-mails/dia, permite remetente sem domínio próprio após verificar o e-mail.
-
-Supabase → **Authentication → Emails → SMTP Settings**: ative *Custom SMTP* e preencha (Resend: host `smtp.resend.com`, porta `465`, usuário `resend`, senha = API key; Brevo: host `smtp-relay.brevo.com`, porta `587`, usuário e senha SMTP do painel). Depois, em **Rate Limits**, aumente *emails sent per hour* para 30.
-
-**Remetente (campo "E-mail remetente" do script / *Sender email* do painel):** precisa ser um endereço de e-mail completo.
-
-- **Resend:** um endereço no domínio que você verificou em *Domains*, por exemplo `nao-responda@seudominio.com.br`. Os nomes que aparecem na tela de DNS (`resend._domainkey`, `send`) são registros para colar no seu provedor de domínio, **não** o remetente. Sem domínio verificado, o Resend só entrega para o e-mail da própria conta Resend.
-- **Brevo:** o e-mail que você cadastrou e confirmou em *Senders* (pode ser o seu Gmail). É a opção mais simples para quem não tem domínio, e já serve para colegas e para a banca.
-
-## 3. Templates de e-mail em português
-
-Supabase → **Authentication → Emails → Templates**. Para cada um, cole o HTML de `supabase/templates/`:
-
-| Template | Arquivo | Assunto |
-| --- | --- | --- |
-| Confirm signup | `confirmation.html` | Seu código de confirmação do ArenaFit |
-| Reset password | `recovery.html` | Código para redefinir sua senha do ArenaFit |
-| Change email address | `email_change.html` | Confirme seu novo e-mail no ArenaFit |
-
-Os templates mostram o código (`{{ .Token }}`) em destaque — é o que torna a verificação confiável, porque links com `arenafit://` não abrem em todos os clientes de e-mail (Gmail na web, por exemplo).
-
-## 4. Login com Google
-
-**No Google Cloud Console** (console.cloud.google.com):
-
-1. Crie um projeto (ex.: "ArenaFit").
-2. **APIs e serviços → Tela de permissão OAuth**: tipo *Externo*, nome "ArenaFit", e-mail de suporte, escopos padrão (`email`, `profile`, `openid`). Enquanto o app estiver em "Teste", adicione os e-mails da equipe e da banca em *Usuários de teste*.
-3. **Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web**.
-4. Em *URIs de redirecionamento autorizados* adicione exatamente:
-   `https://xainescjcawmvarsjumc.supabase.co/auth/v1/callback`
-5. Copie o **Client ID** e o **Client Secret**.
-
-**No Supabase** → **Authentication → Sign In / Providers → Google**: ative, cole Client ID e Secret e salve.
-
-Não é preciso credencial Android: o login passa pelo navegador do sistema e volta ao app pelo deep link. (Um login nativo com o seletor de contas do Android exige build próprio e a biblioteca `@react-native-google-signin` — dá para evoluir depois.)
-
-## Alternativa: tudo por linha de comando
-
-O `supabase/config.toml` já contém as URLs, regras de senha, código de 6 dígitos, templates e o provedor Google. Com a CLI:
-
-```bash
-npx supabase login
-```
-
-```bash
-npx supabase link --project-ref xainescjcawmvarsjumc
-```
-
-```bash
-export GOOGLE_CLIENT_ID="seu-client-id" GOOGLE_CLIENT_SECRET="seu-secret"
-```
-
-```bash
-npx supabase config push
-```
-
-O comando mostra as diferenças e pede confirmação antes de aplicar. Para o SMTP, descomente o bloco `[auth.email.smtp]` e exporte `SMTP_PASSWORD` antes do push.
+**Pela CLI:** o `supabase/config.toml` já está assim. Com `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` exportados, rode `npx supabase config push`.
 
 ## Testando
 
-1. Crie uma conta com um e-mail seu → chega o código → digite no app → segue para o onboarding.
-2. Saia, tente entrar sem ter confirmado (com outra conta) → o app leva à verificação.
-3. "Esqueci minha senha" → código → nova senha → entra direto.
-4. "Continuar com Google" → escolhe a conta → volta ao app logado.
+1. Abra o app → **Continuar com Google** → escolha a conta → volta ao app no onboarding.
+2. Complete o onboarding, saia (Configurações → Sair) e entre de novo: deve ir direto para o início.
+3. Com outra conta Google, confirme que ela também entra (se o app estiver em *Teste* no Google, ela precisa estar em *Usuários de teste*).
 
-Se algo falhar, veja **Authentication → Logs** no painel do Supabase.
+Problemas comuns:
+
+| Mensagem | Causa |
+| --- | --- |
+| `redirect_uri_mismatch` (tela do Google) | O URI do passo 1.5 não está igual na credencial do Google. |
+| "Acesso bloqueado: o app não concluiu o processo de verificação" | O app está em *Teste* e o e-mail não está em *Usuários de teste*. |
+| "Login com Google ainda não foi ativado no servidor" | O passo 2 ainda não foi aplicado. |
+| Volta ao app mas não entra (Expo Go) | Falta `exp://**` nas Redirect URLs do Supabase. |
+
+Para mais detalhes, veja **Authentication → Logs** no painel do Supabase.

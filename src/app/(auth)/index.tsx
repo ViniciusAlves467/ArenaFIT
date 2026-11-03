@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isDemo } from '@/api';
 import { GoogleButton } from '@/components/GoogleButton';
 import { Wordmark } from '@/components/Logo';
-import { Badge, Button, Text } from '@/components/ui';
+import { Badge, Text } from '@/components/ui';
 import { colors, space, type } from '@/theme/tokens';
 
 export default function Welcome() {
@@ -36,8 +36,9 @@ export default function Welcome() {
 
       <View style={{ gap: space.md }}>
         <GoogleButton />
-        <Button title="Criar conta com e-mail" onPress={() => router.push('/(auth)/sign-up')} />
-        <Button title="Já tenho conta" variant="ghost" onPress={() => router.push('/(auth)/sign-in')} />
+        <Text variant="caption" tone="secondary" align="center">
+          Primeiro acesso? A conta é criada na hora, sem senha e sem código por e-mail.
+        </Text>
         <Text variant="caption" tone="muted" align="center" style={{ marginTop: space.xs }}>
           Ao continuar, você concorda com os{' '}
           <Text variant="caption" tone="secondary" style={styles.link} onPress={() => router.push('/legal/terms')}>

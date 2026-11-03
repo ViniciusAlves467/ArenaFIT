@@ -52,30 +52,15 @@ function translateError(message: string): string {
 /** Converte erros do Supabase Auth (pelos códigos estáveis do GoTrue) em mensagens e códigos do app. */
 function authError(error: AuthError): AuthFlowError {
   switch (error.code) {
-    case 'email_not_confirmed':
-      return new AuthFlowError('Confirme seu e-mail para entrar', 'email_not_confirmed');
-    case 'invalid_credentials':
-      return new AuthFlowError('E-mail ou senha incorretos', 'invalid_credentials');
-    case 'user_already_exists':
-    case 'email_exists':
-      return new AuthFlowError('Este e-mail já está cadastrado. Tente entrar.', 'user_exists');
-    case 'weak_password':
-      return new AuthFlowError('Senha fraca: use pelo menos 8 caracteres, com letras e números', 'weak_password');
-    case 'same_password':
-      return new AuthFlowError('A nova senha precisa ser diferente da atual', 'weak_password');
-    case 'otp_expired':
-      return new AuthFlowError('Código inválido ou expirado. Peça um novo.', 'otp_invalid');
-    case 'over_email_send_rate_limit':
     case 'over_request_rate_limit':
       return new AuthFlowError('Muitas tentativas. Aguarde um minuto e tente de novo.', 'rate_limited');
     case 'flow_state_not_found':
     case 'flow_state_expired':
     case 'bad_code_verifier':
-      return new AuthFlowError('Este link expirou ou foi aberto em outro aparelho. Use o código do e-mail.', 'otp_invalid');
-    case 'email_address_invalid':
-      return new AuthFlowError('E-mail inválido', 'unknown');
+      return new AuthFlowError('O login expirou ou foi aberto em outro aparelho. Tente entrar de novo.', 'expired');
+    case 'provider_disabled':
     case 'signup_disabled':
-      return new AuthFlowError('Cadastro desativado no momento', 'unknown');
+      return new AuthFlowError('Login com Google ainda não foi ativado no servidor', 'unknown');
     default:
       if (/rate limit/i.test(error.message)) return new AuthFlowError('Muitas tentativas. Aguarde um minuto.', 'rate_limited');
       return new AuthFlowError(error.message, 'unknown');
@@ -116,24 +101,6 @@ export const supabaseApi: Api = {
       );
       return () => data.subscription.unsubscribe();
     },
-    async signInWithPassword(email, password) {
-      checkAuth(await sb().auth.signInWithPassword({ email, password }));
-    },
-    async signUp(email, password, fullName) {
-      const data = checkAuth(
-        await sb().auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: fullName }, emailRedirectTo: redirectTo() },
-        }),
-      );
-      // Com "Confirm email" ligado o Supabase não devolve sessão; e, por privacidade, um e-mail
-      // já cadastrado volta como sucesso com `identities` vazio.
-      if (data.user && data.user.identities?.length === 0) {
-        throw new AuthFlowError('Este e-mail já está cadastrado. Tente entrar.', 'user_exists');
-      }
-      return { needsConfirmation: !data.session };
-    },
     async signInWithGoogle() {
       // Web: redirecionamento completo; a rota /auth-callback troca o código pela sessão.
       if (Platform.OS === 'web') {
@@ -158,31 +125,6 @@ export const supabaseApi: Api = {
     },
     async exchangeCode(code) {
       checkAuth(await sb().auth.exchangeCodeForSession(code));
-    },
-    async verifyTokenHash(tokenHash, type) {
-      checkAuth(await sb().auth.verifyOtp({ token_hash: tokenHash, type }));
-    },
-    async verifyEmail(email, code) {
-      const res = await sb().auth.verifyOtp({ email, token: code, type: 'email' });
-      // GoTrue antigo só aceita o código de confirmação de cadastro como `signup`.
-      if (res.error?.code === 'otp_expired') {
-        checkAuth(await sb().auth.verifyOtp({ email, token: code, type: 'signup' }));
-        return;
-      }
-      checkAuth(res);
-    },
-    async resendVerification(email) {
-      checkAuth(await sb().auth.resend({ type: 'signup', email, options: { emailRedirectTo: redirectTo() } }));
-    },
-    async requestPasswordReset(email) {
-      checkAuth(await sb().auth.resetPasswordForEmail(email, { redirectTo: redirectTo() }));
-    },
-    async resetPassword(email, code, newPassword) {
-      checkAuth(await sb().auth.verifyOtp({ email, token: code, type: 'recovery' }));
-      checkAuth(await sb().auth.updateUser({ password: newPassword }));
-    },
-    async updatePassword(newPassword) {
-      checkAuth(await sb().auth.updateUser({ password: newPassword }));
     },
     async signOut() {
       await sb().auth.signOut();

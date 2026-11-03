@@ -1,6 +1,6 @@
 # Configuração do Supabase CLI.
 # - Desenvolvimento local: `npx supabase start`.
-# - Projeto na nuvem: `npx supabase config push` envia a seção [auth] (URLs, e-mails, senha, Google, SMTP).
+# - Projeto na nuvem: `npx supabase config push` envia a seção [auth] (URLs e Google).
 #   Antes, exporte as variáveis usadas em env(...) — veja docs/AUTH.md.
 project_id = "xainescjcawmvarsjumc"
 
@@ -21,57 +21,20 @@ file_size_limit = "5MiB"
 
 [auth]
 enabled = true
-# Para onde os links de e-mail e o OAuth voltam. O app envia o redirect exato em cada chamada;
-# aqui ficam os permitidos: APK (arenafit://), Expo Go (exp://…/--/auth-callback) e web local.
+# Login apenas com Google: nenhum e-mail é enviado, então não há SMTP nem templates.
+# Para onde o OAuth volta. O app envia o redirect exato em cada chamada; aqui ficam os
+# permitidos: APK (arenafit://), Expo Go (exp://…/--/auth-callback) e web local.
 site_url = "arenafit://auth-callback"
 additional_redirect_urls = ["arenafit://auth-callback", "exp://**", "http://localhost:8081/**"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
+# Permite criar a conta no primeiro login com Google.
 enable_signup = true
-# Mesma regra do app (src/lib/password.ts).
-minimum_password_length = 8
-password_requirements = "letters_digits"
-
-[auth.rate_limit]
-# Com o SMTP padrão do Supabase o limite real é de poucos e-mails por hora; com SMTP próprio, 30/h.
-email_sent = 30
-token_verifications = 30
 
 [auth.email]
-enable_signup = true
-# Exige confirmação do e-mail antes do primeiro login.
-enable_confirmations = true
-double_confirm_changes = true
-secure_password_change = false
-# Intervalo mínimo entre reenvios (o app mostra a contagem regressiva de 60 s).
-max_frequency = "60s"
-# Código de 6 dígitos, válido por 1 hora (usado nas telas de verificação e recuperação).
-otp_length = 6
-otp_expiry = 3600
-
-[auth.email.template.confirmation]
-subject = "Seu código de confirmação do ArenaFit"
-content_path = "./supabase/templates/confirmation.html"
-
-[auth.email.template.recovery]
-subject = "Código para redefinir sua senha do ArenaFit"
-content_path = "./supabase/templates/recovery.html"
-
-[auth.email.template.email_change]
-subject = "Confirme seu novo e-mail no ArenaFit"
-content_path = "./supabase/templates/email_change.html"
-
-# SMTP próprio (obrigatório para enviar a qualquer e-mail — o SMTP padrão do Supabase só entrega
-# para membros da organização). Exemplo com Resend; descomente após criar a chave.
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.resend.com"
-# port = 465
-# user = "resend"
-# pass = "env(SMTP_PASSWORD)"
-# admin_email = "nao-responda@seu-dominio.com"
-# sender_name = "ArenaFit"
+# Cadastro e login por e-mail/senha desativados (sem custo de SMTP).
+enable_signup = false
 
 # Login com Google: credencial OAuth "Aplicativo da Web" no Google Cloud (passo a passo em docs/AUTH.md).
 [auth.external.google]

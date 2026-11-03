@@ -16,7 +16,7 @@ npm install
 npm start
 ```
 
-Abra no celular com o app **Expo Go** (QR code no terminal) ou pressione `w` para abrir no navegador. No demo, qualquer e-mail/senha entra; "Criar conta" passa pelo onboarding.
+Abra no celular com o app **Expo Go** (QR code no terminal) ou pressione `w` para abrir no navegador. No demo, "Continuar com Google" entra direto numa conta de exemplo.
 
 ## Projeto Supabase (já configurado)
 
@@ -29,7 +29,7 @@ EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Project Settings → API Keys → Publisha
 
 Sem esse arquivo o app volta ao modo demo.
 
-**Autenticação (e-mail com código, recuperação de senha e Google):** siga [`docs/AUTH.md`](docs/AUTH.md). Em resumo, no painel do Supabase: URLs de retorno, SMTP próprio (o SMTP padrão só entrega para membros da organização), templates em português de `supabase/templates/` e as credenciais do Google — ou tudo de uma vez com `npx supabase config push`.
+**Autenticação:** o login é **somente com Google**, sem e-mail/senha. Não há envio de e-mails, então não precisa de SMTP nem de domínio, e não tem custo. Para ativar, crie a credencial no Google Cloud e rode `npm run configure:auth` (passo a passo em [`docs/AUTH.md`](docs/AUTH.md)).
 
 ## Publicando mudanças no Supabase
 
@@ -61,7 +61,7 @@ Desenvolvimento local completo (Docker): `npx supabase start` sobe Postgres/Auth
 | `npm test` | Testes do motor de pontuação e da validação de check-in (Vitest) |
 | `npm run typecheck` | Checagem de tipos |
 | `npm run lint` | ESLint (regras do Expo + React Compiler) |
-| `npm run configure:auth` | Configura a autenticação do Supabase (URLs, SMTP, templates, Google) — ver docs/AUTH.md |
+| `npm run configure:auth` | Ativa o login com Google no Supabase e desliga o login por e-mail (ver docs/AUTH.md) |
 | `npm run simulate` | Simulação do modelo para o TCC (cold start e distribuição dos bônus — seção 14 do estudo) |
 | `npm run build:android` | Build nativo local (requer Android SDK). Para APK na nuvem: `npx eas-cli build -p android` |
 
@@ -70,7 +70,7 @@ Desenvolvimento local completo (Docker): `npx supabase start` sobe Postgres/Auth
 ```
 src/
   app/                 Telas (Expo Router: cada arquivo é uma rota)
-    (auth)/            Boas-vindas, login, cadastro, verificação de e-mail, recuperação de senha
+    (auth)/            Boas-vindas com login pelo Google
     onboarding/        Dados corporais + consentimento LGPD, avatar
     (tabs)/            Início, Grupos, Desafios, Perfil
     routines/          Treinos fixos (lista e editor)
