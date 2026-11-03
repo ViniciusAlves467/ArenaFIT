@@ -79,6 +79,46 @@ async function value(envName, question, opts) {
   return ask(question, opts);
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function senderHelp(provider, typed) {
+  const lines = [`   ✖ "${typed}" não é um e-mail.`];
+  if (/_domainkey|^resend\.|^send\./i.test(typed)) {
+    lines.push('     Isso é o nome de um registro DNS do Resend, não o remetente.');
+  }
+  if (provider === 'resend') {
+    lines.push(
+      '     Use um endereço no domínio que você verificou no Resend (Domains), ex.: nao-responda@seudominio.com.br',
+      '     Sem domínio próprio? Rode de novo escolhendo "brevo": ele aceita seu Gmail como remetente verificado.',
+    );
+  } else {
+    lines.push('     Use o e-mail cadastrado em Senders no Brevo (pode ser o seu Gmail), ex.: voce@gmail.com');
+  }
+  return lines.join('\n');
+}
+
+/** Remetente do SMTP: precisa ser um e-mail de verdade (a API rejeita qualquer outra coisa). */
+async function senderEmail(provider) {
+  const fromEnv = process.env.SMTP_SENDER_EMAIL?.trim();
+  if (fromEnv) {
+    if (!EMAIL_RE.test(fromEnv)) throw new Error(`SMTP_SENDER_EMAIL inválido.\n${senderHelp(provider, fromEnv)}`);
+    return fromEnv;
+  }
+  const example = provider === 'resend' ? 'nao-responda@seudominio.com.br' : 'voce@gmail.com';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const typed = await ask(`   E-mail remetente (ex.: ${example}): `);
+    if (!typed) return '';
+    if (EMAIL_RE.test(typed)) return typed;
+    console.log(senderHelp(provider, typed));
+  }
+  throw new Error('Remetente inválido. Nada foi alterado.');
+}
+
+/** A API devolve alguns números como texto (ex.: smtp_port); compara pelo valor. */
+const sameValue = (a, b) =>
+  JSON.stringify(a) === JSON.stringify(b) ||
+  (a != null && b != null && typeof a !== 'object' && typeof b !== 'object' && String(a) === String(b));
+
 const mask = (v) => (typeof v === 'string' && v.length > 6 ? `${v.slice(0, 3)}…${v.slice(-2)}` : '••••');
 const template = (name) => readFileSync(join(ROOT, 'supabase', 'templates', name), 'utf8');
 
@@ -95,7 +135,13 @@ async function api(method, token, body) {
   const text = await res.text();
   if (!res.ok) {
     const hint =
-      res.status === 401 ? ' (token inválido ou expirado)' : res.status === 403 ? ' (sua conta não tem acesso a este projeto)' : '';
+      res.status === 401
+        ? ' (token inválido ou expirado)'
+        : res.status === 403
+          ? ' (sua conta não tem acesso a este projeto)'
+          : res.status === 400
+            ? ' (a API recusou a alteração inteira — nada foi mudado no projeto)'
+            : '';
     throw new Error(`${method} config/auth → HTTP ${res.status}${hint}: ${text.slice(0, 300)}`);
   }
   return text ? JSON.parse(text) : {};
@@ -128,10 +174,7 @@ async function main() {
     if (!preset) throw new Error(`Provedor desconhecido: ${provider}`);
     const user = preset.user ?? (await value('SMTP_USER', '   Login SMTP do Brevo (e-mail da conta): '));
     const pass = await value('SMTP_PASSWORD', `   ${preset.hint}: `, { secret: true });
-    const sender = await value(
-      'SMTP_SENDER_EMAIL',
-      '   E-mail remetente (no Resend precisa ser de um domínio verificado; no Brevo, um remetente verificado): ',
-    );
+    const sender = await senderEmail(provider);
     if (!user || !pass || !sender) throw new Error('Preencha login, senha/chave e remetente do SMTP, ou escolha "none".');
     smtp = { host: preset.host, port: preset.port, user, pass, sender };
   }
@@ -166,7 +209,7 @@ async function main() {
   if (smtp) {
     Object.assign(patch, {
       smtp_host: smtp.host,
-      smtp_port: smtp.port,
+      smtp_port: String(smtp.port), // a API exige texto
       smtp_user: smtp.user,
       smtp_pass: smtp.pass,
       smtp_admin_email: smtp.sender,
@@ -187,7 +230,7 @@ async function main() {
   console.log('\n  Alterações:');
   for (const [k, v] of Object.entries(patch)) {
     const shown = SECRET_KEYS.has(k) ? mask(v) : k.endsWith('_content') ? `(template HTML, ${v.length} caracteres)` : JSON.stringify(v);
-    const same = !SECRET_KEYS.has(k) && JSON.stringify(current[k]) === JSON.stringify(v);
+    const same = !SECRET_KEYS.has(k) && sameValue(current[k], v);
     console.log(`   ${same ? '=' : '•'} ${k}: ${shown}${same ? '  (já estava assim)' : ''}`);
   }
   if (unknown.length) console.log(`\n   ⚠ Ignorados (a API não reconhece): ${unknown.join(', ')}`);
@@ -209,7 +252,7 @@ async function main() {
   await api('PATCH', token, patch);
   const after = await api('GET', token);
   const mismatched = Object.keys(patch).filter(
-    (k) => !SECRET_KEYS.has(k) && JSON.stringify(after[k]) !== JSON.stringify(patch[k]),
+    (k) => !SECRET_KEYS.has(k) && !sameValue(after[k], patch[k]),
   );
   if (mismatched.length) {
     console.log(`\n  ⚠ Aplicado, mas estes campos voltaram diferentes: ${mismatched.join(', ')}`);

@@ -55,6 +55,11 @@ Opções gratuitas:
 
 Supabase → **Authentication → Emails → SMTP Settings**: ative *Custom SMTP* e preencha (Resend: host `smtp.resend.com`, porta `465`, usuário `resend`, senha = API key; Brevo: host `smtp-relay.brevo.com`, porta `587`, usuário e senha SMTP do painel). Depois, em **Rate Limits**, aumente *emails sent per hour* para 30.
 
+**Remetente (campo "E-mail remetente" do script / *Sender email* do painel):** precisa ser um endereço de e-mail completo.
+
+- **Resend:** um endereço no domínio que você verificou em *Domains*, por exemplo `nao-responda@seudominio.com.br`. Os nomes que aparecem na tela de DNS (`resend._domainkey`, `send`) são registros para colar no seu provedor de domínio, **não** o remetente. Sem domínio verificado, o Resend só entrega para o e-mail da própria conta Resend.
+- **Brevo:** o e-mail que você cadastrou e confirmou em *Senders* (pode ser o seu Gmail). É a opção mais simples para quem não tem domínio, e já serve para colegas e para a banca.
+
 ## 3. Templates de e-mail em português
 
 Supabase → **Authentication → Emails → Templates**. Para cada um, cole o HTML de `supabase/templates/`:
@@ -68,8 +73,6 @@ Supabase → **Authentication → Emails → Templates**. Para cada um, cole o H
 Os templates mostram o código (`{{ .Token }}`) em destaque — é o que torna a verificação confiável, porque links com `arenafit://` não abrem em todos os clientes de e-mail (Gmail na web, por exemplo).
 
 ## 4. Login com Google
-
-**Remetente do SMTP:** no Resend, sem domínio próprio só é possível enviar para o e-mail da própria conta Resend — para a banca e colegas, verifique um domínio (Domains → Add domain) ou use o Brevo, que aceita como remetente um e-mail pessoal verificado (Senders → Add sender).
 
 **No Google Cloud Console** (console.cloud.google.com):
 
