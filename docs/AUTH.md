@@ -13,6 +13,30 @@
 
 No **modo demo** todos os fluxos funcionam com o código `123456`.
 
+## Caminho rápido: um comando configura tudo
+
+O script `scripts/configure-auth.mjs` aplica de uma vez as URLs de retorno, o SMTP, os templates em português, as regras de senha/código e o login com Google, usando a API oficial do Supabase. Ele mostra cada mudança antes de aplicar e confere o resultado no final. Você só precisa juntar três credenciais (passo a passo abaixo):
+
+| O que | Onde conseguir | Tempo |
+| --- | --- | --- |
+| Token de acesso do Supabase | supabase.com/dashboard/account/tokens → *Generate new token* | 1 min |
+| Chave SMTP | Resend (resend.com → API Keys) ou Brevo (app.brevo.com → SMTP & API) | 5 min |
+| Client ID e Secret do Google | Google Cloud Console (seção 4 abaixo) | 10 min |
+
+Na pasta do projeto, no seu computador:
+
+```bash
+npm run configure:auth -- --dry-run
+```
+
+```bash
+npm run configure:auth
+```
+
+O primeiro só mostra o que mudaria; o segundo pergunta as chaves (sem exibi-las na tela), mostra o resumo e pede confirmação. Pode rodar de novo quando quiser — por exemplo, depois de criar as credenciais do Google. Se pular o SMTP ou o Google, o resto é aplicado normalmente.
+
+As seções abaixo explicam cada item, caso prefira configurar pelo painel.
+
 ## 1. URLs de retorno (obrigatório)
 
 Supabase → **Authentication → URL Configuration**:
@@ -44,6 +68,8 @@ Supabase → **Authentication → Emails → Templates**. Para cada um, cole o H
 Os templates mostram o código (`{{ .Token }}`) em destaque — é o que torna a verificação confiável, porque links com `arenafit://` não abrem em todos os clientes de e-mail (Gmail na web, por exemplo).
 
 ## 4. Login com Google
+
+**Remetente do SMTP:** no Resend, sem domínio próprio só é possível enviar para o e-mail da própria conta Resend — para a banca e colegas, verifique um domínio (Domains → Add domain) ou use o Brevo, que aceita como remetente um e-mail pessoal verificado (Senders → Add sender).
 
 **No Google Cloud Console** (console.cloud.google.com):
 

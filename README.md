@@ -61,6 +61,7 @@ Desenvolvimento local completo (Docker): `npx supabase start` sobe Postgres/Auth
 | `npm test` | Testes do motor de pontuação e da validação de check-in (Vitest) |
 | `npm run typecheck` | Checagem de tipos |
 | `npm run lint` | ESLint (regras do Expo + React Compiler) |
+| `npm run configure:auth` | Configura a autenticação do Supabase (URLs, SMTP, templates, Google) — ver docs/AUTH.md |
 | `npm run simulate` | Simulação do modelo para o TCC (cold start e distribuição dos bônus — seção 14 do estudo) |
 | `npm run build:android` | Build nativo local (requer Android SDK). Para APK na nuvem: `npx eas-cli build -p android` |
 

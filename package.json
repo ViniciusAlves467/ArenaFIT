@@ -49,7 +49,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "simulate": "node --no-warnings scripts/simulate-scoring.mts",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "configure:auth": "node scripts/configure-auth.mjs"
   },
   "private": true
 }
