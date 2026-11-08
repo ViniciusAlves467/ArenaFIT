@@ -31,6 +31,18 @@ Sem esse arquivo o app volta ao modo demo.
 
 **Autenticação:** o login é **somente com Google**, sem e-mail/senha. Não há envio de e-mails, então não precisa de SMTP nem de domínio, e não tem custo. Para ativar, crie a credencial no Google Cloud e rode `npm run configure:auth` (passo a passo em [`docs/AUTH.md`](docs/AUTH.md)).
 
+## Testando com a equipe (cada um na sua casa)
+
+O banco e o login estão na nuvem, então cada colega usa a própria conta Google e todos veem os mesmos grupos e rankings. No Google Cloud, adicione o Gmail de cada pessoa em **Google Auth Platform → Público-alvo → Usuários de teste** (ou publique o app).
+
+| Jeito | Para quem | Como |
+| --- | --- | --- |
+| **APK** (recomendado) | Android | `npx eas-cli@latest build -p android --profile preview` gera um link de download; quem abrir instala o app. Não depende do seu computador ligado. |
+| **Expo Go + túnel** | Android e iPhone | Você roda `npx expo start --tunnel` e manda o QR code; funciona só enquanto o seu computador estiver com o servidor aberto. |
+| **Cada um roda o projeto** | Quem programa | Clonar o repositório, `npm install`, criar o `.env.local` (ver `.env.example`) e `npx expo start`. |
+
+O perfil `preview` do `eas.json` já embute a URL e a chave publicável do Supabase, então o APK abre no banco real, e não no modo demo. A chave publicável foi feita para ir dentro do app; a proteção dos dados vem da RLS.
+
 ## Publicando mudanças no Supabase
 
 Novas migrations e funções podem ser aplicadas com a CLI:
